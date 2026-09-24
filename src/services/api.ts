@@ -14,8 +14,8 @@ import {
 import { defaultTestimonials } from '../data/defaultTestimonials';
 
 // Force same-origin relative paths to avoid any cached/incorrect environment variables
-const BASE_URL = '';
-console.log('API Service Version: 2026-09-24-V2 (Force Relative)');
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+console.log('API Service Version: 2026-09-24-V3 (Using Base URL fallback)');
 const TOKEN_KEY = 'sh_studio_admin_token';
 
 export const getToken = (): string | null => localStorage.getItem(TOKEN_KEY);
