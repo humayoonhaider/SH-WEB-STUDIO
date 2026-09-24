@@ -1,0 +1,6 @@
+{
+  "name": "SH Web Studio",
+  "description": "We Build Digital Experiences. Complete full-stack web development agency platform for modern websites, web applications, and custom digital solutions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
