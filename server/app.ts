@@ -21,9 +21,11 @@ import { ProjectModel, ServiceModel } from './models/schemas.js';
 const app = express();
 
 // Sitemap Generation Logic
-app.get('/sitemap.xml', async (_req, res) => {
+app.get('/sitemap.xml', async (req, res) => {
   try {
-    const baseUrl = process.env.SITE_URL || 'https://shwebstudio.dev';
+    const host = req.get('host');
+    const protocol = req.protocol;
+    const baseUrl = process.env.SITE_URL || `${protocol}://${host}`;
     const staticRoutes = [
       '',
       '/services',
@@ -85,6 +87,23 @@ app.get('/sitemap.xml', async (_req, res) => {
     console.error('Sitemap generation error:', error);
     res.status(500).send('Error generating sitemap');
   }
+});
+
+// Dynamic Robots.txt Logic
+app.get('/robots.txt', (req, res) => {
+  const host = req.get('host');
+  const protocol = req.protocol;
+  const baseUrl = process.env.SITE_URL || `${protocol}://${host}`;
+  
+  const content = `User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api
+
+Sitemap: ${baseUrl}/sitemap.xml
+`;
+  res.header('Content-Type', 'text/plain');
+  res.send(content);
 });
 
 // Security Middleware
