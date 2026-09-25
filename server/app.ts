@@ -12,10 +12,80 @@ import seoRoutes from './routes/seoRoutes.js';
 import statsRoutes from './routes/statsRoutes.js';
 import testimonialRoutes from './routes/testimonialRoutes.js';
 import pricingRoutes from './routes/pricingRoutes.js';
+import mediaRoutes from './routes/mediaRoutes.js';
 import { seedInitialData } from './seed/seedData.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
+import { ProjectModel, ServiceModel } from './models/schemas.js';
+
 const app = express();
+
+// Sitemap Generation Logic
+app.get('/sitemap.xml', async (_req, res) => {
+  try {
+    const baseUrl = process.env.SITE_URL || 'https://shwebstudio.dev';
+    const staticRoutes = [
+      '',
+      '/services',
+      '/work',
+      '/about',
+      '/reviews',
+      '/testimonials',
+      '/contact'
+    ];
+
+    // Fetch dynamic slugs
+    const [projects, services] = await Promise.all([
+      ProjectModel.find({ isActive: true }).select('slug updatedAt').lean(),
+      ServiceModel.find({ isActive: true }).select('slug updatedAt').lean()
+    ]);
+
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>';
+    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
+
+    // Add static routes
+    staticRoutes.forEach(route => {
+      xml += `
+  <url>
+    <loc>${baseUrl}${route}</loc>
+    <changefreq>weekly</changefreq>
+    <priority>${route === '' ? '1.0' : '0.8'}</priority>
+  </url>`;
+    });
+
+    // Add dynamic project routes
+    projects.forEach(project => {
+      const lastMod = project.updatedAt ? new Date(project.updatedAt as any).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+      xml += `
+  <url>
+    <loc>${baseUrl}/work/${project.slug}</loc>
+    <lastmod>${lastMod}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>`;
+    });
+
+    // Add dynamic service routes
+    services.forEach(service => {
+      const lastMod = service.updatedAt ? new Date(service.updatedAt as any).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+      xml += `
+  <url>
+    <loc>${baseUrl}/services#${service.slug}</loc>
+    <lastmod>${lastMod}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>`;
+    });
+
+    xml += '\n</urlset>';
+
+    res.header('Content-Type', 'application/xml');
+    res.send(xml);
+  } catch (error) {
+    console.error('Sitemap generation error:', error);
+    res.status(500).send('Error generating sitemap');
+  }
+});
 
 // Security Middleware
 app.use(helmet({
@@ -88,6 +158,7 @@ app.use('/api/seo', seoRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/testimonials', testimonialRoutes);
 app.use('/api/pricing', pricingRoutes);
+app.use('/api/media', mediaRoutes);
 
 // 404 for unhandled API endpoints
 app.all('/api/*', (_req, res) => {

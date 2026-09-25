@@ -50,6 +50,11 @@ export interface ISiteSettings extends Document {
   ctaTitle: string;
   ctaDescription: string;
   footerText: string;
+  customPortfolios: Array<{
+    name: string;
+    url: string;
+    title?: string;
+  }>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -81,7 +86,14 @@ export const SiteSettingsSchema = new Schema<ISiteSettings>({
   aboutDescription: { type: String, default: 'SH Web Studio is a small web development studio founded by Humayoon, Shariq and Shujaulmulk. We focus on building modern websites, web applications and custom digital solutions for businesses.\n\nOur approach is simple: understand the business first, then build technology that solves a real problem.' },
   ctaTitle: { type: String, default: 'Have a project in mind?' },
   ctaDescription: { type: String, default: "Tell us what you're building and let's discuss how we can turn the idea into a practical digital solution." },
-  footerText: { type: String, default: '© 2026 SH Web Studio. All rights reserved.' }
+  footerText: { type: String, default: '© 2026 SH Web Studio. All rights reserved.' },
+  customPortfolios: [
+    {
+      name: { type: String, default: '', trim: true },
+      url: { type: String, default: '', trim: true },
+      title: { type: String, default: 'Founder Portfolio', trim: true }
+    }
+  ]
 }, { timestamps: true });
 
 // 3. Service Interface & Schema
@@ -195,6 +207,11 @@ export interface IContactInquiry extends Document {
   projectType: string;
   budget: string;
   message: string;
+  inquiryType: 'client' | 'developer_application';
+  portfolioUrl?: string;
+  githubUrl?: string;
+  experience?: string;
+  skills?: string;
   status: 'new' | 'read' | 'contacted' | 'completed' | 'archived';
   createdAt: Date;
   updatedAt: Date;
@@ -208,6 +225,11 @@ export const ContactInquirySchema = new Schema<IContactInquiry>({
   projectType: { type: String, default: 'Web Development', trim: true },
   budget: { type: String, default: '', trim: true },
   message: { type: String, required: true },
+  inquiryType: { type: String, enum: ['client', 'developer_application'], default: 'client', index: true },
+  portfolioUrl: { type: String, default: '', trim: true },
+  githubUrl: { type: String, default: '', trim: true },
+  experience: { type: String, default: '', trim: true },
+  skills: { type: String, default: '', trim: true },
   status: {
     type: String,
     enum: ['new', 'read', 'contacted', 'completed', 'archived'],

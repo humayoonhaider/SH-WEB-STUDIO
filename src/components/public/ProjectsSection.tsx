@@ -5,6 +5,7 @@ import { api } from '../../services/api';
 import { SectionHeading } from '../common/SectionHeading';
 import { CardSkeleton } from '../common/Loader';
 import { Link } from 'react-router-dom';
+import { OptimizedImage } from '../common/OptimizedImage';
 
 export const ProjectsSection: React.FC<{ limit?: number; showHeader?: boolean }> = ({
   limit,
@@ -71,12 +72,13 @@ export const ProjectsSection: React.FC<{ limit?: number; showHeader?: boolean }>
                 className="group flex flex-col rounded-2xl bg-[#121318] border border-[#262833] overflow-hidden transition-all duration-200 hover:border-neutral-600 hover:bg-[#15161D]"
               >
                 {/* Project Visual / Abstract Preview */}
-                <div className="relative aspect-[16/10] bg-[#17181D] border-b border-[#262833] overflow-hidden flex items-center justify-center p-6">
+                <div className="relative aspect-[16/10] bg-[#17181D] border-b border-[#262833] overflow-hidden flex items-center justify-center">
                   {project.imageUrl ? (
-                    <img
+                    <OptimizedImage
                       src={project.imageUrl}
                       alt={project.title}
                       className="w-full h-full object-cover object-top transition-transform duration-300 group-hover:scale-105"
+                      width={600}
                     />
                   ) : (
                     /* Elegant architectural abstract preview card */

@@ -1,26 +1,80 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, Phone, MapPin, ExternalLink, Github, Linkedin, Instagram, Facebook, Lock } from 'lucide-react';
+import { Mail, Phone, MapPin, ExternalLink, Github, Linkedin, Instagram, Facebook, Globe, ShieldCheck } from 'lucide-react';
 import { useSite } from '../../context/SiteContext';
 import { BrandLogo } from './BrandLogo';
+import { api } from '../../services/api';
+import { TeamMember } from '../../types';
 
 export const Footer: React.FC = () => {
   const { settings } = useSite();
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    api.team
+      .getPublic()
+      .then((res) => {
+        if (mounted && res.success && res.data) {
+          setTeamMembers(res.data);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Compile all founder & creator portfolios dynamically
+  const allPortfolios: Array<{ name: string; url: string; title?: string }> = [];
+
+  // 1. From settings.customPortfolios (custom configured in Admin)
+  if (settings.customPortfolios && settings.customPortfolios.length > 0) {
+    settings.customPortfolios.forEach((p) => {
+      if (p.url && p.url.trim()) {
+        allPortfolios.push({
+          name: p.name || 'Founder Portfolio',
+          url: p.url.trim(),
+          title: p.title || 'Portfolio',
+        });
+      }
+    });
+  }
+
+  // 2. From registered team members who have portfolioUrl
+  teamMembers.forEach((t) => {
+    const pUrl = t.portfolioUrl ? t.portfolioUrl.trim() : '';
+    if (pUrl && !allPortfolios.some((p) => p.url === pUrl)) {
+      allPortfolios.push({
+        name: t.name ? `${t.name}'s Portfolio` : 'Founder Portfolio',
+        url: pUrl,
+        title: t.isFounder ? 'Founder' : (t.role || 'Portfolio'),
+      });
+    }
+  });
+
+  // 3. Fallback to settings.portfolioUrl if list is still empty
+  if (allPortfolios.length === 0 && settings.portfolioUrl && settings.portfolioUrl.trim()) {
+    allPortfolios.push({
+      name: 'Founder Portfolio',
+      url: settings.portfolioUrl.trim(),
+      title: 'Founder Portfolio',
+    });
+  }
 
   const hasContactInfo = Boolean(settings.email || settings.phone || settings.address);
   const hasSocials = Boolean(
     settings.githubUrl ||
     settings.linkedinUrl ||
     settings.instagramUrl ||
-    settings.facebookUrl ||
-    settings.portfolioUrl
+    settings.facebookUrl
   );
 
   return (
     <footer className="bg-[#08080C] border-t border-[#262833] text-neutral-400 text-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-12">
-          {/* Brand & Mission */}
+          {/* Brand & Mission & Founder Portfolios */}
           <div className="space-y-4">
             <Link to="/" className="inline-block">
               {settings.logoUrl ? (
@@ -36,17 +90,33 @@ export const Footer: React.FC = () => {
             <p className="text-xs text-neutral-500 leading-relaxed pt-1">
               {settings.serviceLine || 'Websites • Web Apps • Digital Solutions'}
             </p>
-            {settings.portfolioUrl && (
-              <div className="pt-2">
-                <a
-                  href={settings.portfolioUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors"
-                >
-                  <span>Founder Portfolio</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
+
+            {/* Multiple Founder Portfolios List */}
+            {allPortfolios.length > 0 && (
+              <div className="pt-3 space-y-2 border-t border-[#1C1D24]">
+                <div className="text-[11px] font-mono uppercase tracking-wider text-neutral-400 font-semibold flex items-center justify-between">
+                  <span>Founder Portfolios</span>
+                  <span className="text-blue-400 font-mono text-[10px]">
+                    {allPortfolios.length} {allPortfolios.length === 1 ? 'Link' : 'Links'}
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {allPortfolios.map((item, idx) => (
+                    <a
+                      key={idx}
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group flex items-center justify-between text-xs text-neutral-300 hover:text-white bg-[#121318] hover:bg-[#1A1B22] border border-[#262833] hover:border-blue-500/40 px-2.5 py-1.5 rounded-lg transition-all"
+                      title={`${item.name} (${item.url})`}
+                    >
+                      <span className="truncate group-hover:text-blue-400 transition-colors font-medium">
+                        {item.name}
+                      </span>
+                      <ExternalLink className="w-3 h-3 text-neutral-500 group-hover:text-blue-400 shrink-0 ml-1.5" />
+                    </a>
+                  ))}
+                </div>
               </div>
             )}
           </div>

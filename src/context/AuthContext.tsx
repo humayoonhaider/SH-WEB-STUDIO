@@ -6,7 +6,7 @@ interface AuthContextType {
   admin: AdminUser | null;
   isAuthenticated: boolean;
   loading: boolean;
-  login: (credentials: { email: string; password: string }) => Promise<void>;
+  login: (credentials: { email: string; password: string; remember?: boolean }) => Promise<void>;
   logout: () => Promise<void>;
   updateAdmin: (admin: AdminUser) => void;
   refreshMe: () => Promise<void>;
@@ -47,10 +47,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshMe();
   }, [refreshMe]);
 
-  const login = async (credentials: { email: string; password: string }) => {
-    const res = await api.auth.login(credentials);
+  const login = async (credentials: { email: string; password: string; remember?: boolean }) => {
+    const res = await api.auth.login({ email: credentials.email, password: credentials.password });
     if (res.success && res.token && res.admin) {
-      setToken(res.token);
+      setToken(res.token, credentials.remember ?? false);
       setAdmin(res.admin);
     } else {
       throw new Error(res.message || 'Login failed.');

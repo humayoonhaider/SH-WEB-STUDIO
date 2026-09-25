@@ -3,6 +3,7 @@ import { Mail, Globe, Github, Linkedin, ExternalLink, ShieldCheck } from 'lucide
 import { TeamMember } from '../../types';
 import { api } from '../../services/api';
 import { SectionHeading } from '../common/SectionHeading';
+import { OptimizedImage } from '../common/OptimizedImage';
 
 export const TeamSection: React.FC = () => {
   const [team, setTeam] = useState<TeamMember[]>([]);
@@ -76,24 +77,34 @@ export const TeamSection: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <SectionHeading
-          kicker="Our Experts"
-          title="Meet Our Engineering Team"
-          description="Talented developers and founders building exceptional digital solutions and custom web applications."
+          kicker="Founders & Core Team"
+          title="Meet the Minds Behind SH Web Studio"
+          description="A dedicated group of passionate software engineers and builders crafting scalable web applications and bespoke digital systems."
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-16">
           {team.map((member) => (
             <div
               key={member._id}
-              className="group bg-[#121318] border border-[#262833] hover:border-blue-500/40 rounded-3xl p-8 transition-all duration-300 flex flex-col justify-between shadow-xl hover:-translate-y-1"
+              className="group bg-[#121318] border border-[#262833] hover:border-blue-500/40 rounded-3xl p-8 transition-all duration-300 flex flex-col justify-between shadow-xl hover:-translate-y-1 relative overflow-hidden"
             >
+              {member.isFounder && (
+                <div className="absolute top-4 right-4">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                    <ShieldCheck className="w-3 h-3" />
+                    Founder
+                  </span>
+                </div>
+              )}
               <div>
                 <div className="flex items-center gap-4 mb-6">
                   {member.imageUrl ? (
-                    <img
+                    <OptimizedImage
                       src={member.imageUrl}
                       alt={member.name}
-                      className="w-16 h-16 rounded-2xl object-cover border border-[#262833]"
+                      className="w-16 h-16 rounded-2xl border border-[#262833]"
+                      width={64}
+                      height={64}
                     />
                   ) : (
                     <div className="w-16 h-16 rounded-2xl bg-[#1A1B22] border border-[#262833] flex items-center justify-center text-blue-400 font-mono font-bold text-lg shadow-inner">

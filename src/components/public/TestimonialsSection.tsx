@@ -4,6 +4,7 @@ import { Star, ChevronLeft, ChevronRight, Quote, ArrowRight } from 'lucide-react
 import { Testimonial } from '../../types';
 import { api } from '../../services/api';
 import { Spinner } from '../common/Loader';
+import { OptimizedImage } from '../common/OptimizedImage';
 import { defaultTestimonials } from '../../data/defaultTestimonials';
 
 export const TestimonialsSection: React.FC = () => {
@@ -153,10 +154,12 @@ export const TestimonialsSection: React.FC = () => {
               <div className="pt-6 border-t border-[#1C1D24] flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   {current.avatarUrl ? (
-                    <img
+                    <OptimizedImage
                       src={current.avatarUrl}
                       alt={current.name}
-                      className="w-12 h-12 rounded-full object-cover border border-[#262833]"
+                      className="w-12 h-12 rounded-full border border-[#262833]"
+                      width={48}
+                      height={48}
                     />
                   ) : (
                     <div className="w-12 h-12 rounded-2xl bg-[#17181D] border border-blue-500/30 flex items-center justify-center text-sm font-bold font-mono text-blue-400">

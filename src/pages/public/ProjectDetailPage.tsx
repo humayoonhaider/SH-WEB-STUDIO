@@ -3,6 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ExternalLink, Github, ArrowLeft, Laptop, CheckCircle2, ArrowRight } from 'lucide-react';
 import { Project } from '../../types';
 import { api } from '../../services/api';
+import { SEO } from '../../components/common/SEO';
+import { OptimizedImage } from '../../components/common/OptimizedImage';
 import { Spinner } from '../../components/common/Loader';
 import { FooterCta } from '../../components/public/FooterCta';
 
@@ -66,6 +68,12 @@ export const ProjectDetailPage: React.FC = () => {
 
   return (
     <div className="pt-28 pb-16">
+      <SEO 
+        title={`${project.title} | SH Web Studio Portfolio`}
+        description={project.description}
+        ogImage={project.imageUrl}
+        type="article"
+      />
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Back navigation */}
         <div className="mb-8">
@@ -121,10 +129,12 @@ export const ProjectDetailPage: React.FC = () => {
         {/* Visual / Screenshot Showcase */}
         <div className="rounded-2xl border border-[#262833] bg-[#121318] overflow-hidden mb-12 shadow-2xl">
           {project.imageUrl ? (
-            <img
+            <OptimizedImage
               src={project.imageUrl}
               alt={project.title}
               className="w-full object-cover max-h-[550px]"
+              priority={true}
+              width={1200}
             />
           ) : (
             <div className="aspect-[16/9] max-h-[480px] bg-gradient-to-br from-[#17181D] to-[#0E0F14] p-8 sm:p-12 flex flex-col justify-between relative overflow-hidden">

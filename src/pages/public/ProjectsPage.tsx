@@ -8,6 +8,10 @@ import { ExternalLink, Github, ArrowRight, Laptop } from 'lucide-react';
 import { FooterCta } from '../../components/public/FooterCta';
 
 export const ProjectsPage: React.FC = () => {
+  useEffect(() => {
+    document.title = 'Our Work | SH Web Studio Portfolio';
+  }, []);
+
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');

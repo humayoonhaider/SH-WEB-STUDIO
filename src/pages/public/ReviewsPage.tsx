@@ -18,6 +18,9 @@ import { Spinner } from '../../components/common/Loader';
 import { defaultTestimonials } from '../../data/defaultTestimonials';
 
 export const ReviewsPage: React.FC = () => {
+  useEffect(() => {
+    document.title = 'Client Success Stories & Reviews | SH Web Studio';
+  }, []);
   const [testimonials, setTestimonials] = useState<Testimonial[]>(defaultTestimonials);
   const [loading, setLoading] = useState(false);
   const [selectedTag, setSelectedTag] = useState<string>('all');

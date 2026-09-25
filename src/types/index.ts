@@ -27,6 +27,11 @@ export interface SiteSettings {
   ctaTitle: string;
   ctaDescription: string;
   footerText: string;
+  customPortfolios?: Array<{
+    name: string;
+    url: string;
+    title?: string;
+  }>;
 }
 
 export interface Service {
@@ -93,6 +98,11 @@ export interface ContactInquiry {
   projectType?: string;
   budget?: string;
   message: string;
+  inquiryType?: 'client' | 'developer_application';
+  portfolioUrl?: string;
+  githubUrl?: string;
+  experience?: string;
+  skills?: string;
   status: 'new' | 'read' | 'contacted' | 'completed' | 'archived';
   createdAt: string;
   updatedAt: string;

@@ -39,6 +39,7 @@ const defaultSettings: SiteSettings = {
   ctaTitle: 'Have a project in mind?',
   ctaDescription: "Tell us what you're building and let's discuss how we can turn the idea into a practical digital solution.",
   footerText: '© 2026 SH Web Studio. All rights reserved.',
+  customPortfolios: [],
 };
 
 const defaultSEO: SEOSettings = {
@@ -47,7 +48,7 @@ const defaultSEO: SEOSettings = {
   keywords: 'SH Web Studio, web development, custom web applications, mern stack, react, websites',
   ogTitle: 'SH Web Studio | Web Development & Digital Solutions',
   ogDescription: 'We Build Digital Experiences. Websites • Web Apps • Digital Solutions',
-  ogImage: '',
+  ogImage: '/og-image.jpg',
   robots: 'index, follow',
   canonicalUrl: '',
 };
@@ -121,6 +122,9 @@ export const SiteProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     if (seo.robots) {
       updateMeta('robots', seo.robots);
+    }
+    if (seo.ogImage) {
+      updateOg('og:image', seo.ogImage);
     }
 
     // Favicon update if configured

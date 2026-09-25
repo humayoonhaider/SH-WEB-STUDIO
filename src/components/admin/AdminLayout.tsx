@@ -17,6 +17,7 @@ import {
   ShieldAlert,
   Star,
   DollarSign,
+  Activity,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSite } from '../../context/SiteContext';
@@ -40,6 +41,7 @@ export const AdminLayout: React.FC = () => {
     { label: 'Process Steps', path: '/admin/process', icon: GitPullRequest },
     { label: 'Inquiries', path: '/admin/inquiries', icon: MessageSquare },
     { label: 'SEO & Metadata', path: '/admin/seo', icon: Search },
+    { label: 'Performance Health', path: '/admin/performance', icon: Activity },
     { label: 'Admin Profile', path: '/admin/profile', icon: User },
   ];
 

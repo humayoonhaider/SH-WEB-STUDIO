@@ -3,13 +3,13 @@
     {
       "_id": "45b8bdb1b205a7bc3813e8d1",
       "id": "45b8bdb1b205a7bc3813e8d1",
-      "name": "Muhammad Humayoon",
+      "name": "SH ADMIN",
       "email": "humayoonkhan003@gmail.com",
-      "passwordHash": "$2b$10$oz72.GfsfK9DJ99EuaVnROQ4NYskED5gen1JlIgSknuojMJbpT9HG",
+      "passwordHash": "$2b$10$.c02zzs0j0hwy8PxgDKL8eDM24HwZbnmNGFiXgzDp5anZ5Dp0I0Wa",
       "role": "admin",
       "isActive": true,
       "createdAt": "2026-09-24T15:12:04.294Z",
-      "updatedAt": "2026-09-24T15:12:04.294Z"
+      "updatedAt": "2026-09-25T17:28:28.661Z"
     }
   ],
   "siteSettings": [

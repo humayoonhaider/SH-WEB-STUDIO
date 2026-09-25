@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, CheckCircle2, AlertCircle, RefreshCw, Palette, Globe, Phone, Share2, Home, FileText } from 'lucide-react';
+import { Save, CheckCircle2, AlertCircle, RefreshCw, Palette, Globe, Phone, Share2, Home, FileText, Plus, Trash2, ExternalLink } from 'lucide-react';
 import { SiteSettings } from '../../types';
 import { api } from '../../services/api';
 import { useSite } from '../../context/SiteContext';
@@ -24,6 +24,32 @@ export const AdminSettingsPage: React.FC = () => {
       ...prev,
       [e.target.name]: e.target.value,
     }));
+  };
+
+  const handleAddPortfolio = () => {
+    setFormData((prev) => ({
+      ...prev,
+      customPortfolios: [
+        ...(prev.customPortfolios || []),
+        { name: '', url: '', title: 'Founder Portfolio' },
+      ],
+    }));
+  };
+
+  const handlePortfolioChange = (index: number, field: string, value: string) => {
+    setFormData((prev) => {
+      const updated = [...(prev.customPortfolios || [])];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, customPortfolios: updated };
+    });
+  };
+
+  const handleRemovePortfolio = (index: number) => {
+    setFormData((prev) => {
+      const updated = [...(prev.customPortfolios || [])];
+      updated.splice(index, 1);
+      return { ...prev, customPortfolios: updated };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -442,6 +468,89 @@ export const AdminSettingsPage: React.FC = () => {
                   className="w-full px-4 py-2.5 rounded-xl bg-[#17181D] border border-[#262833] text-white text-sm focus:outline-none focus:border-blue-500"
                 />
               </div>
+            </div>
+
+            {/* Multiple Founder & Team Portfolios Section */}
+            <div className="pt-6 border-t border-[#1C1D24] space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-bold text-white font-heading">
+                    Founder & Creator Portfolios (Footer Multi-Links)
+                  </h3>
+                  <p className="text-xs text-neutral-400 mt-0.5">
+                    Add as many founder or developer portfolios as you want. Each one will be listed in the website footer.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAddPortfolio}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 transition-colors shrink-0 shadow-sm"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Founder Portfolio</span>
+                </button>
+              </div>
+
+              {formData.customPortfolios && formData.customPortfolios.length > 0 ? (
+                <div className="space-y-3">
+                  {formData.customPortfolios.map((portfolio, idx) => (
+                    <div
+                      key={idx}
+                      className="p-4 rounded-2xl bg-[#17181D] border border-[#262833] flex flex-col sm:flex-row items-center gap-3"
+                    >
+                      <div className="w-full sm:w-1/3">
+                        <label className="block text-[10px] font-mono uppercase text-neutral-400 mb-1">
+                          Founder Name / Title
+                        </label>
+                        <input
+                          type="text"
+                          value={portfolio.name}
+                          onChange={(e) => handlePortfolioChange(idx, 'name', e.target.value)}
+                          placeholder="e.g. Humayoon (Lead Engineer)"
+                          className="w-full px-3 py-2 rounded-xl bg-[#121318] border border-[#262833] text-white text-xs focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div className="w-full sm:w-1/2">
+                        <label className="block text-[10px] font-mono uppercase text-neutral-400 mb-1">
+                          Portfolio URL
+                        </label>
+                        <input
+                          type="url"
+                          value={portfolio.url}
+                          onChange={(e) => handlePortfolioChange(idx, 'url', e.target.value)}
+                          placeholder="https://yourportfolio.dev"
+                          className="w-full px-3 py-2 rounded-xl bg-[#121318] border border-[#262833] text-white text-xs font-mono focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div className="w-full sm:w-auto flex items-end sm:pt-4">
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePortfolio(idx)}
+                          className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-colors"
+                          title="Remove this portfolio"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-5 rounded-2xl bg-[#17181D] border border-dashed border-[#262833] text-center text-xs text-neutral-400 space-y-2">
+                  <p>No custom founder portfolios added yet. (Registered team members with portfolios are also shown automatically).</p>
+                  <button
+                    type="button"
+                    onClick={handleAddPortfolio}
+                    className="text-blue-400 hover:text-blue-300 font-semibold inline-flex items-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Click to add your first custom founder portfolio</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

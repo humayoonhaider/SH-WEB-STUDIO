@@ -3,6 +3,9 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Fail fast on database operations if offline
+mongoose.set('bufferCommands', false);
+
 let isMongooseConnected = false;
 let dbStatusDetails = {
   isAtlasConnected: false,
@@ -12,9 +15,9 @@ let dbStatusDetails = {
 };
 
 export const connectDB = async (): Promise<boolean> => {
-  const mongoURI = process.env.MONGODB_URI;
+  const mongoURI = process.env.MONGODB_URI?.trim();
 
-  if (!mongoURI) {
+  if (!mongoURI || mongoURI.includes('<password>') || mongoURI.includes('<db_username>')) {
     dbStatusDetails = {
       isAtlasConnected: false,
       storageMode: 'local',
@@ -27,9 +30,9 @@ export const connectDB = async (): Promise<boolean> => {
 
   try {
     const conn = await mongoose.connect(mongoURI, {
-      serverSelectionTimeoutMS: 30000,
-      connectTimeoutMS: 30000,
-      socketTimeoutMS: 45000,
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 5000,
+      socketTimeoutMS: 15000,
     });
     isMongooseConnected = true;
     dbStatusDetails = {
@@ -41,17 +44,21 @@ export const connectDB = async (): Promise<boolean> => {
     console.log(`[Storage] ✅ Atlas Connected: ${conn.connection.host}`);
     return true;
   } catch (err: any) {
-    console.error(`[Storage] ❌ Atlas Connection Failed: ${err.message}`);
-    // When Atlas cluster blocks the preview environment dynamic IP, seamlessly run on local storage
     isMongooseConnected = false;
+    await mongoose.disconnect().catch(() => {});
+
+    const isAuthError = err.message?.includes('auth') || err.message?.includes('authentication');
+    const notice = isAuthError
+      ? 'MongoDB Atlas authentication failed (check credentials in MONGODB_URI). Application is running seamlessly in persistent local storage mode.'
+      : 'MongoDB Atlas connection unavailable (requires 0.0.0.0/0 IP whitelisting in Atlas). Application is running seamlessly in persistent local storage mode.';
+
     dbStatusDetails = {
       isAtlasConnected: false,
       storageMode: 'local',
       clusterHost: null,
-      notice:
-        'MongoDB Atlas requires IP whitelisting (0.0.0.0/0 in Atlas Network Access) to connect from cloud container environments. Application is operating seamlessly in persistent local storage mode.',
+      notice,
     };
-    console.log('[Storage] Operating in persistent local storage mode.');
+    console.log(`[Storage] Note: ${notice} (${err.message})`);
     return false;
   }
 };

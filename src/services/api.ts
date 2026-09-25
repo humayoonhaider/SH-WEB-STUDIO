@@ -15,12 +15,33 @@ import { defaultTestimonials } from '../data/defaultTestimonials';
 
 // Force same-origin relative paths to avoid any cached/incorrect environment variables
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
-console.log('API Service Version: 2026-09-24-V3 (Using Base URL fallback)');
-const TOKEN_KEY = 'sh_studio_admin_token';
+const TOKEN_KEY = 'sh_admin_auth_token_v3';
 
-export const getToken = (): string | null => localStorage.getItem(TOKEN_KEY);
-export const setToken = (token: string): void => localStorage.setItem(TOKEN_KEY, token);
-export const removeToken = (): void => localStorage.removeItem(TOKEN_KEY);
+// Clear any legacy insecure tokens from previous versions
+try {
+  localStorage.removeItem('sh_studio_admin_token');
+  sessionStorage.removeItem('sh_studio_admin_token');
+} catch {}
+
+export const getToken = (): string | null => {
+  // Check sessionStorage first (per-tab/session), then localStorage (persistent)
+  return sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
+};
+
+export const setToken = (token: string, remember = false): void => {
+  if (remember) {
+    localStorage.setItem(TOKEN_KEY, token);
+    sessionStorage.removeItem(TOKEN_KEY);
+  } else {
+    sessionStorage.setItem(TOKEN_KEY, token);
+    localStorage.removeItem(TOKEN_KEY);
+  }
+};
+
+export const removeToken = (): void => {
+  sessionStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(TOKEN_KEY);
+};
 
 interface ApiResponse<T> {
   success: boolean;
@@ -75,45 +96,8 @@ async function request<T>(
     console.error('API Connection Error:', {
       url,
       method: options.method || 'GET',
-      error: networkError.message
+      error: networkError.message,
     });
-
-    // Seamless offline/fallback handling for admin login
-    if (endpoint === '/api/auth/login') {
-      let loginEmail = 'humayoonkhan003@gmail.com';
-      try {
-        if (typeof options.body === 'string') {
-          const bodyParsed = JSON.parse(options.body);
-          if (bodyParsed.email) loginEmail = bodyParsed.email;
-        }
-      } catch {}
-      return {
-        success: true,
-        token: 'fallback_jwt_token_shwebstudio_2026',
-        admin: {
-          id: 'admin_local_fallback_id',
-          name: 'Humayoon',
-          email: loginEmail,
-          role: 'admin',
-          lastLogin: new Date().toISOString(),
-        },
-      } as unknown as ApiResponse<T>;
-    }
-
-    // Fallback for stats
-    if (endpoint === '/api/stats') {
-      return {
-        success: true,
-        data: {
-          totalProjects: 3,
-          activeProjects: 3,
-          activeServices: 6,
-          teamMembers: 3,
-          totalInquiries: 0,
-          newInquiries: 0,
-        },
-      } as unknown as ApiResponse<T>;
-    }
 
     throw new Error(`Connection failed: ${networkError.message || 'The server could not be reached.'}`);
   }
@@ -257,14 +241,20 @@ export const api = {
       budget?: string;
       message: string;
       honeypot?: string;
+      inquiryType?: 'client' | 'developer_application';
+      portfolioUrl?: string;
+      githubUrl?: string;
+      experience?: string;
+      skills?: string;
     }) =>
       request<{ id: string }>('/api/inquiries', {
         method: 'POST',
         body: JSON.stringify(data),
       }),
-    getAll: (params?: { status?: string; search?: string }) => {
+    getAll: (params?: { status?: string; search?: string; type?: string }) => {
       const q = new URLSearchParams();
       if (params?.status) q.set('status', params.status);
+      if (params?.type) q.set('type', params.type);
       if (params?.search) q.set('search', params.search);
       const queryStr = q.toString() ? `?${q.toString()}` : '';
       return request<ContactInquiry[]>(`/api/inquiries${queryStr}`);
@@ -288,6 +278,13 @@ export const api = {
       request<SEOSettings>('/api/seo', {
         method: 'PUT',
         body: JSON.stringify(data),
+      }),
+    getSearchConsole: (googleAccessToken: string) =>
+      request<any>('/api/seo/search-console', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${googleAccessToken}`,
+        },
       }),
   },
 

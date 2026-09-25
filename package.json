@@ -18,6 +18,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "@types/nprogress": "^0.2.3",
     "@vitejs/plugin-react": "^6.1.1",
+    "axios": "^1.20.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",
@@ -30,8 +31,10 @@
     "nprogress": "^0.2.0",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
+    "react-helmet-async": "^3.0.0",
     "react-router-dom": "^7.18.4",
     "recharts": "^3.10.1",
+    "sharp": "^0.35.4",
     "vite": "^8.3.0"
   },
   "devDependencies": {

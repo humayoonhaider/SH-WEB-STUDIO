@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation, Outlet } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from './context/AuthContext';
 import { SiteProvider } from './context/SiteContext';
 import { Navbar } from './components/common/Navbar';
@@ -30,6 +31,7 @@ import { AdminPricingPage } from './pages/admin/AdminPricingPage';
 import { AdminProcessPage } from './pages/admin/AdminProcessPage';
 import { AdminInquiriesPage } from './pages/admin/AdminInquiriesPage';
 import { AdminSeoPage } from './pages/admin/AdminSeoPage';
+import { AdminPerformancePage } from './pages/admin/AdminPerformancePage';
 import { AdminProfilePage } from './pages/admin/AdminProfilePage';
 
 // Scroll to top helper on route navigation
@@ -63,12 +65,13 @@ const PublicLayout: React.FC = () => {
 
 export const App: React.FC = () => {
   return (
-    <BrowserRouter>
-      <SiteProvider>
-        <AuthProvider>
-          <RouteProgressBar />
-          <ScrollToTop />
-          <Routes>
+    <HelmetProvider>
+      <BrowserRouter>
+        <SiteProvider>
+          <AuthProvider>
+            <RouteProgressBar />
+            <ScrollToTop />
+            <Routes>
             {/* Public Agency Routes */}
             <Route element={<PublicLayout />}>
               <Route path="/" element={<HomePage />} />
@@ -105,12 +108,14 @@ export const App: React.FC = () => {
               <Route path="process" element={<AdminProcessPage />} />
               <Route path="inquiries" element={<AdminInquiriesPage />} />
               <Route path="seo" element={<AdminSeoPage />} />
+              <Route path="performance" element={<AdminPerformancePage />} />
               <Route path="profile" element={<AdminProfilePage />} />
             </Route>
           </Routes>
         </AuthProvider>
       </SiteProvider>
     </BrowserRouter>
+    </HelmetProvider>
   );
 };
 

@@ -1,0 +1,16 @@
+{
+  "name": "SH Web Studio",
+  "short_name": "SH Studio",
+  "description": "High-performance web development studio specializing in modern React ecosystems.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B0B0F",
+  "theme_color": "#2563EB",
+  "icons": [
+    {
+      "src": "/og-image.jpg",
+      "sizes": "1200x630",
+      "type": "image/jpeg"
+    }
+  ]
+}

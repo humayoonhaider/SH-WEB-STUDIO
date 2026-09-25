@@ -39,7 +39,7 @@ export const AboutSection: React.FC<{ showFounders?: boolean }> = ({ showFounder
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
           {/* Main Story & Philosophy */}
-          <div className="lg:col-span-6 space-y-6">
+          <div className={showFounders ? 'lg:col-span-6 space-y-6' : 'lg:col-span-7 space-y-6'}>
             <SectionHeading
               kicker="Who We Are"
               title={settings.aboutTitle || 'About SH Web Studio'}
@@ -49,21 +49,24 @@ export const AboutSection: React.FC<{ showFounders?: boolean }> = ({ showFounder
               {settings.aboutDescription || (
                 <>
                   <p>
-                    SH Web Studio is a small web development studio founded by Humayoon,
-                    Shariq and Shujaulmulk. We focus on building modern websites, web
-                    applications and custom digital solutions for businesses.
+                    SH Web Studio is a modern software and web development studio founded by Humayoon,
+                    Shariq and Shujaulmulk. We focus on building modern websites, custom web
+                    applications, and scalable digital solutions for growing businesses and startups.
                   </p>
                   <p>
-                    Our approach is simple: understand the business first, then build technology
-                    that solves a real problem.
+                    Our approach is simple: understand the core business objectives first, then architect and engineer technology
+                    that solves real problems cleanly and reliably.
+                  </p>
+                  <p>
+                    From initial prototype to production deployment, we maintain obsessive attention to code quality, security, and lightning-fast load times.
                   </p>
                 </>
               )}
             </div>
           </div>
 
-          {/* Founders Grid */}
-          {showFounders && (
+          {/* Founders Grid OR Studio Engineering Standards */}
+          {showFounders ? (
             <div className="lg:col-span-6 flex flex-col justify-center">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xs uppercase tracking-widest text-neutral-400 font-mono font-semibold">
@@ -166,6 +169,45 @@ export const AboutSection: React.FC<{ showFounders?: boolean }> = ({ showFounder
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          ) : (
+            <div className="lg:col-span-5 flex flex-col justify-center">
+              <div className="p-7 sm:p-8 rounded-3xl bg-[#121318] border border-[#262833] space-y-6 shadow-xl">
+                <div className="flex items-center justify-between border-b border-[#1C1D24] pb-4">
+                  <h3 className="text-xs uppercase tracking-widest text-neutral-300 font-mono font-semibold">
+                    Studio Engineering Standards
+                  </h3>
+                  <span className="text-[11px] font-mono text-emerald-400">Strict Quality</span>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-bold text-white font-heading">Direct Senior Involvement</h4>
+                    <p className="text-xs text-neutral-400 leading-relaxed">
+                      Every project is led and built by seasoned engineers who have built production systems.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-bold text-white font-heading">Zero Cookie-Cutter Templates</h4>
+                    <p className="text-xs text-neutral-400 leading-relaxed">
+                      Hand-crafted codebases tailored to your brand identity, business workflows, and performance needs.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-bold text-white font-heading">Scalable & Maintainable</h4>
+                    <p className="text-xs text-neutral-400 leading-relaxed">
+                      Modular TypeScript and React components backed by resilient APIs that scale as your customer base expands.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-[#1C1D24] flex items-center justify-between text-[11px] font-mono text-neutral-500">
+                  <span>EST. 2026</span>
+                  <span>ISLAMABAD / REMOTE</span>
+                </div>
               </div>
             </div>
           )}
