@@ -24,7 +24,11 @@ export function createRateLimiter(options: { windowMs: number; maxRequests: numb
     if (process.env.NODE_ENV !== 'production') {
       return next();
     }
-    const ip = req.ip || req.headers['x-forwarded-for']?.toString() || 'anonymous';
+    
+    // Extract real client IP behind proxy (e.g. Railway, Cloudflare)
+    const xff = req.headers['x-forwarded-for'];
+    const forwardedIp = typeof xff === 'string' ? xff.split(',')[0].trim() : Array.isArray(xff) ? xff[0] : null;
+    const ip = forwardedIp || req.ip || req.socket?.remoteAddress || 'anonymous';
     const now = Date.now();
 
     if (!store[ip] || store[ip].resetTime < now) {

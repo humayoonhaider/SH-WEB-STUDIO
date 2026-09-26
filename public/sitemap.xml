@@ -37,6 +37,18 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://sh-web-studio.up.railway.app/pricing</loc>
+    <lastmod>2026-09-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://sh-web-studio.up.railway.app/process</loc>
+    <lastmod>2026-09-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://sh-web-studio.up.railway.app/work/e-commerce-shop</loc>
     <lastmod>2026-09-25</lastmod>
     <changefreq>monthly</changefreq>

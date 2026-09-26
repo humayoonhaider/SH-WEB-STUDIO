@@ -20,81 +20,126 @@ import { ProjectModel, ServiceModel } from './models/schemas.js';
 
 const app = express();
 
-// Sitemap Generation Logic
+// Enable reverse proxy trust for Railway / Cloudflare (prevents IP collision and 429 errors)
+app.set('trust proxy', true);
+
+// Fast, Cached Sitemap.xml Generator (Supports Dynamic Mongo Slugs with Infallible Static Fallback)
 app.get('/sitemap.xml', async (req, res) => {
   try {
-    const host = req.get('host');
-    const protocol = req.protocol;
-    const baseUrl = process.env.SITE_URL || `${protocol}://${host}`;
+    const rawHost = req.headers['x-forwarded-host'] || req.get('host') || 'sh-web-studio.up.railway.app';
+    const host = Array.isArray(rawHost) ? rawHost[0] : rawHost.split(',')[0].trim();
+    const rawProto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+    const protocol = Array.isArray(rawProto) ? rawProto[0] : rawProto.split(',')[0].trim();
+    
+    // Normalize base URL (prefer SITE_URL env if provided, else use request host)
+    const baseUrl = (process.env.SITE_URL || `${protocol}://${host}`).replace(/\/$/, '');
+
     const staticRoutes = [
-      '',
-      '/services',
-      '/work',
-      '/about',
-      '/reviews',
-      '/testimonials',
-      '/contact'
+      { path: '', priority: '1.0', changefreq: 'daily' },
+      { path: '/services', priority: '0.9', changefreq: 'weekly' },
+      { path: '/work', priority: '0.9', changefreq: 'weekly' },
+      { path: '/about', priority: '0.8', changefreq: 'monthly' },
+      { path: '/reviews', priority: '0.8', changefreq: 'weekly' },
+      { path: '/testimonials', priority: '0.8', changefreq: 'weekly' },
+      { path: '/contact', priority: '0.8', changefreq: 'monthly' },
+      { path: '/pricing', priority: '0.8', changefreq: 'monthly' },
+      { path: '/process', priority: '0.7', changefreq: 'monthly' },
     ];
 
-    // Fetch dynamic slugs
-    const [projects, services] = await Promise.all([
-      ProjectModel.find({ isActive: true }).select('slug updatedAt').lean(),
-      ServiceModel.find({ isActive: true }).select('slug updatedAt').lean()
-    ]);
+    let projects: any[] = [];
+    let services: any[] = [];
 
-    let xml = '<?xml version="1.0" encoding="UTF-8"?>';
-    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
+    // Safely query dynamic models with timeout protection
+    try {
+      const results = await Promise.race([
+        Promise.all([
+          ProjectModel.find({ isActive: true }).select('slug updatedAt').lean(),
+          ServiceModel.find({ isActive: true }).select('slug updatedAt').lean(),
+        ]),
+        new Promise<[any[], any[]]>((_, reject) =>
+          setTimeout(() => reject(new Error('DB Timeout')), 1500)
+        ),
+      ]);
+      projects = results[0] || [];
+      services = results[1] || [];
+    } catch {
+      // Graceful fallback to static defaults if DB is slow/connecting
+      projects = [
+        { slug: 'e-commerce-shop', updatedAt: new Date() },
+        { slug: 'intelligence-hub', updatedAt: new Date() },
+      ];
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
 
     // Add static routes
-    staticRoutes.forEach(route => {
-      xml += `
-  <url>
-    <loc>${baseUrl}${route}</loc>
-    <changefreq>weekly</changefreq>
-    <priority>${route === '' ? '1.0' : '0.8'}</priority>
-  </url>`;
-    });
+    for (const route of staticRoutes) {
+      xml += `  <url>\n    <loc>${baseUrl}${route.path}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${route.changefreq}</changefreq>\n    <priority>${route.priority}</priority>\n  </url>\n`;
+    }
 
     // Add dynamic project routes
-    projects.forEach(project => {
-      const lastMod = project.updatedAt ? new Date(project.updatedAt as any).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-      xml += `
-  <url>
-    <loc>${baseUrl}/work/${project.slug}</loc>
-    <lastmod>${lastMod}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>`;
-    });
+    for (const project of projects) {
+      if (project?.slug) {
+        const lastMod = project.updatedAt
+          ? new Date(project.updatedAt).toISOString().split('T')[0]
+          : today;
+        xml += `  <url>\n    <loc>${baseUrl}/work/${project.slug}</loc>\n    <lastmod>${lastMod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>\n`;
+      }
+    }
 
     // Add dynamic service routes
-    services.forEach(service => {
-      const lastMod = service.updatedAt ? new Date(service.updatedAt as any).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-      xml += `
-  <url>
-    <loc>${baseUrl}/services#${service.slug}</loc>
-    <lastmod>${lastMod}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>`;
-    });
+    for (const service of services) {
+      if (service?.slug) {
+        const lastMod = service.updatedAt
+          ? new Date(service.updatedAt).toISOString().split('T')[0]
+          : today;
+        xml += `  <url>\n    <loc>${baseUrl}/services#${service.slug}</loc>\n    <lastmod>${lastMod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>\n`;
+      }
+    }
 
-    xml += '\n</urlset>';
+    xml += '</urlset>';
 
-    res.header('Content-Type', 'application/xml');
-    res.send(xml);
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.status(200).send(xml);
   } catch (error) {
     console.error('Sitemap generation error:', error);
-    res.status(500).send('Error generating sitemap');
+    // Absolute fallback so Google Search Console never gets a 429 or 500
+    const fallbackXml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://sh-web-studio.up.railway.app/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://sh-web-studio.up.railway.app/services</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://sh-web-studio.up.railway.app/work</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+</urlset>`;
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.status(200).send(fallbackXml);
   }
 });
 
-// Dynamic Robots.txt Logic
+// Dynamic Robots.txt Route
 app.get('/robots.txt', (req, res) => {
-  const host = req.get('host');
-  const protocol = req.protocol;
-  const baseUrl = process.env.SITE_URL || `${protocol}://${host}`;
-  
+  const rawHost = req.headers['x-forwarded-host'] || req.get('host') || 'sh-web-studio.up.railway.app';
+  const host = Array.isArray(rawHost) ? rawHost[0] : rawHost.split(',')[0].trim();
+  const rawProto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+  const protocol = Array.isArray(rawProto) ? rawProto[0] : rawProto.split(',')[0].trim();
+  const baseUrl = (process.env.SITE_URL || `${protocol}://${host}`).replace(/\/$/, '');
+
   const content = `User-agent: *
 Allow: /
 Disallow: /admin
@@ -102,8 +147,9 @@ Disallow: /api
 
 Sitemap: ${baseUrl}/sitemap.xml
 `;
-  res.header('Content-Type', 'text/plain');
-  res.send(content);
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.status(200).send(content);
 });
 
 // Security Middleware
