@@ -3,6 +3,8 @@ import { Save, CheckCircle2, AlertCircle, RefreshCw, Palette, Globe, Phone, Shar
 import { SiteSettings } from '../../types';
 import { api } from '../../services/api';
 import { useSite } from '../../context/SiteContext';
+import { ImageUpload } from '../../components/common/ImageUpload';
+import { AdminSubmitButton } from '../../components/admin/AdminSubmitButton';
 
 type TabType = 'general' | 'branding' | 'contact' | 'social' | 'homepage' | 'footer';
 
@@ -11,6 +13,8 @@ export const AdminSettingsPage: React.FC = () => {
   const [formData, setFormData] = useState<SiteSettings>(initialSettings);
   const [activeTab, setActiveTab] = useState<TabType>('general');
   const [saving, setSaving] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isUploadingFavicon, setIsUploadingFavicon] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
@@ -94,15 +98,17 @@ export const AdminSettingsPage: React.FC = () => {
           </p>
         </div>
 
-        <button
+        <AdminSubmitButton
           type="button"
           onClick={handleSubmit}
-          disabled={saving}
-          className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 transition-all shadow-md"
+          loading={saving}
+          isUploading={isUploadingLogo || isUploadingFavicon}
+          loadingText="Saving Website Settings..."
+          uploadingText="Uploading Branding Assets..."
+          size="md"
         >
-          {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          <span>{saving ? 'Saving...' : 'Save Changes'}</span>
-        </button>
+          Save Changes
+        </AdminSubmitButton>
       </div>
 
       {message && (
@@ -217,33 +223,26 @@ export const AdminSettingsPage: React.FC = () => {
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-300 mb-2">
-                  Logo URL
-                </label>
-                <input
-                  type="url"
-                  name="logoUrl"
+                <ImageUpload
+                  label="Website Logo"
+                  helperText="Upload transparent PNG, SVG, or WebP logo file (optional, defaults to typographic wordmark)"
                   value={formData.logoUrl}
-                  onChange={handleChange}
-                  placeholder="https://your-domain.com/logo.svg (optional fallback to text wordmark)"
-                  className="w-full px-4 py-2.5 rounded-xl bg-[#17181D] border border-[#262833] text-white text-sm focus:outline-none focus:border-blue-500"
+                  onChange={(url) => setFormData((prev) => ({ ...prev, logoUrl: url }))}
+                  onProcessingChange={setIsUploadingLogo}
+                  aspectRatio="auto"
+                  maxDimension={800}
                 />
-                <p className="text-[11px] text-neutral-500 mt-1.5">
-                  If left blank, the website renders the typographic "SH Web Studio" wordmark.
-                </p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-300 mb-2">
-                  Favicon URL
-                </label>
-                <input
-                  type="url"
-                  name="faviconUrl"
+                <ImageUpload
+                  label="Favicon"
+                  helperText="Upload favicon icon (PNG, ICO, SVG, WebP) for browser tab"
                   value={formData.faviconUrl}
-                  onChange={handleChange}
-                  placeholder="https://your-domain.com/favicon.ico"
-                  className="w-full px-4 py-2.5 rounded-xl bg-[#17181D] border border-[#262833] text-white text-sm focus:outline-none focus:border-blue-500"
+                  onChange={(url) => setFormData((prev) => ({ ...prev, faviconUrl: url }))}
+                  onProcessingChange={setIsUploadingFavicon}
+                  aspectRatio="square"
+                  maxDimension={256}
                 />
               </div>
             </div>

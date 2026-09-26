@@ -19,12 +19,15 @@ import { api } from '../../services/api';
 import { Modal } from '../../components/common/Modal';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { Spinner } from '../../components/common/Loader';
+import { ImageUpload } from '../../components/common/ImageUpload';
+import { AdminSubmitButton } from '../../components/admin/AdminSubmitButton';
 
 export const AdminTeamPage: React.FC = () => {
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -474,31 +477,28 @@ export const AdminTeamPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-300 mb-1.5">
-                Photo URL (Optional)
-              </label>
-              <input
-                type="url"
-                value={formData.imageUrl}
-                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                placeholder="Leave blank for initials avatar"
-                className="w-full px-3 py-2 rounded-xl bg-[#17181D] border border-[#262833] text-white text-sm focus:outline-none focus:border-blue-500"
-              />
-            </div>
+          <div>
+            <ImageUpload
+              label="Member Photo / Avatar"
+              helperText="Upload profile photo (PNG, JPG, WebP) - Auto compressed"
+              value={formData.imageUrl}
+              onChange={(url) => setFormData({ ...formData, imageUrl: url })}
+              onProcessingChange={setIsUploadingPhoto}
+              aspectRatio="avatar"
+              maxDimension={600}
+            />
+          </div>
 
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-300 mb-1.5">
-                Display Order
-              </label>
-              <input
-                type="number"
-                value={formData.order}
-                onChange={(e) => setFormData({ ...formData, order: Number(e.target.value) })}
-                className="w-full px-3 py-2 rounded-xl bg-[#17181D] border border-[#262833] text-white text-sm focus:outline-none focus:border-blue-500"
-              />
-            </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-300 mb-1.5">
+              Display Order
+            </label>
+            <input
+              type="number"
+              value={formData.order}
+              onChange={(e) => setFormData({ ...formData, order: Number(e.target.value) })}
+              className="w-full px-3 py-2 rounded-xl bg-[#17181D] border border-[#262833] text-white text-sm focus:outline-none focus:border-blue-500"
+            />
           </div>
 
           <div>
@@ -547,14 +547,15 @@ export const AdminTeamPage: React.FC = () => {
             >
               Cancel
             </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-6 py-2 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-lg shadow-blue-600/20"
+            <AdminSubmitButton
+              loading={saving}
+              isUploading={isUploadingPhoto}
+              loadingText="Saving Member..."
+              uploadingText="Uploading Profile Photo..."
+              size="sm"
             >
-              {saving && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-              <span>{saving ? 'Saving...' : editingMember ? 'Save Changes' : 'Create Member'}</span>
-            </button>
+              {editingMember ? 'Save Changes' : 'Create Member'}
+            </AdminSubmitButton>
           </div>
         </form>
       </Modal>

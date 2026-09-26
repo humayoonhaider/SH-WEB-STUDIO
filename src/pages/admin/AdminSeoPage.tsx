@@ -3,6 +3,8 @@ import { Save, RefreshCw, CheckCircle2, AlertCircle, Search, Share2, BarChart2, 
 import { SEOSettings } from '../../types';
 import { api } from '../../services/api';
 import { Spinner } from '../../components/common/Loader';
+import { ImageUpload } from '../../components/common/ImageUpload';
+import { AdminSubmitButton } from '../../components/admin/AdminSubmitButton';
 
 declare global {
   interface Window {
@@ -24,6 +26,7 @@ export const AdminSeoPage: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isUploadingOg, setIsUploadingOg] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   
   // Search Console State
@@ -374,34 +377,30 @@ export const AdminSeoPage: React.FC = () => {
           <span>OpenGraph & Social Sharing Cards (Facebook, LinkedIn, Twitter/X)</span>
         </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-300 mb-2">
-              OG Title
-            </label>
-            <input
-              type="text"
-              name="ogTitle"
-              value={formData.ogTitle || ''}
-              onChange={handleChange}
-              placeholder="Defaults to meta title if empty"
-              className="w-full px-4 py-2.5 rounded-xl bg-[#17181D] border border-[#262833] text-white text-sm focus:outline-none focus:border-blue-500"
-            />
-          </div>
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-300 mb-2">
+            OG Title
+          </label>
+          <input
+            type="text"
+            name="ogTitle"
+            value={formData.ogTitle || ''}
+            onChange={handleChange}
+            placeholder="Defaults to meta title if empty"
+            className="w-full px-4 py-2.5 rounded-xl bg-[#17181D] border border-[#262833] text-white text-sm focus:outline-none focus:border-blue-500"
+          />
+        </div>
 
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-300 mb-2">
-              OG Social Banner Image URL
-            </label>
-            <input
-              type="url"
-              name="ogImage"
-              value={formData.ogImage || ''}
-              onChange={handleChange}
-              placeholder="https://your-domain.com/og-image.jpg"
-              className="w-full px-4 py-2.5 rounded-xl bg-[#17181D] border border-[#262833] text-white text-sm focus:outline-none focus:border-blue-500"
-            />
-          </div>
+        <div>
+          <ImageUpload
+            label="OpenGraph Social Banner Card Image (Facebook, WhatsApp, LinkedIn, Twitter)"
+            helperText="Upload social preview card image (1200x630px recommended, PNG, JPG, WebP)"
+            value={formData.ogImage}
+            onChange={(url) => setFormData((prev) => ({ ...prev, ogImage: url }))}
+            onProcessingChange={setIsUploadingOg}
+            aspectRatio="wide"
+            maxDimension={1600}
+          />
         </div>
 
         <div>
@@ -419,14 +418,15 @@ export const AdminSeoPage: React.FC = () => {
         </div>
 
         <div className="pt-6 border-t border-[#1C1D24] flex justify-end">
-          <button
-            type="submit"
-            disabled={saving}
-            className="inline-flex items-center gap-2 px-8 py-3 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 transition-all shadow-md"
+          <AdminSubmitButton
+            loading={saving}
+            isUploading={isUploadingOg}
+            loadingText="Updating SEO Settings..."
+            uploadingText="Uploading Social Share Card Image..."
+            size="lg"
           >
-            {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            <span>{saving ? 'Updating SEO...' : 'Save Changes'}</span>
-          </button>
+            Save Changes
+          </AdminSubmitButton>
         </div>
       </form>
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User, Lock, Save, RefreshCw, CheckCircle2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
+import { AdminSubmitButton } from '../../components/admin/AdminSubmitButton';
 
 export const AdminProfilePage: React.FC = () => {
   const { admin, refreshAdmin } = useAuth();
@@ -160,18 +161,14 @@ export const AdminProfilePage: React.FC = () => {
             </div>
 
             <div className="pt-3 flex justify-end">
-              <button
-                type="submit"
-                disabled={profileLoading}
-                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 transition-all shadow-md"
+              <AdminSubmitButton
+                loading={profileLoading}
+                loadingText="Updating Profile..."
+                size="sm"
+                icon={<Save className="w-3.5 h-3.5" />}
               >
-                {profileLoading ? (
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <Save className="w-3.5 h-3.5" />
-                )}
-                <span>{profileLoading ? 'Saving...' : 'Update Details'}</span>
-              </button>
+                Update Details
+              </AdminSubmitButton>
             </div>
           </form>
         </div>
@@ -271,18 +268,14 @@ export const AdminProfilePage: React.FC = () => {
             </div>
 
             <div className="pt-3 flex justify-end">
-              <button
-                type="submit"
-                disabled={passwordLoading}
-                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 transition-all shadow-md"
+              <AdminSubmitButton
+                loading={passwordLoading}
+                loadingText="Updating Password..."
+                size="sm"
+                icon={<Lock className="w-3.5 h-3.5" />}
               >
-                {passwordLoading ? (
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <Lock className="w-3.5 h-3.5" />
-                )}
-                <span>{passwordLoading ? 'Updating...' : 'Change Password'}</span>
-              </button>
+                Change Password
+              </AdminSubmitButton>
             </div>
           </form>
         </div>

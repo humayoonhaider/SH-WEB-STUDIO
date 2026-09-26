@@ -5,6 +5,7 @@ import { api } from '../../services/api';
 import { Modal } from '../../components/common/Modal';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { Spinner } from '../../components/common/Loader';
+import { AdminSubmitButton } from '../../components/admin/AdminSubmitButton';
 
 const availableIcons = [
   'Globe',
@@ -335,14 +336,13 @@ export const AdminServicesPage: React.FC = () => {
             >
               Cancel
             </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-6 py-2 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+            <AdminSubmitButton
+              loading={saving}
+              loadingText="Saving Service..."
+              size="sm"
             >
-              {saving && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-              <span>{saving ? 'Saving...' : 'Save Service'}</span>
-            </button>
+              {editingService ? 'Update Service' : 'Create Service'}
+            </AdminSubmitButton>
           </div>
         </form>
       </Modal>

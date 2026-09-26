@@ -5,12 +5,15 @@ import { api } from '../../services/api';
 import { Modal } from '../../components/common/Modal';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { Spinner } from '../../components/common/Loader';
+import { ImageUpload } from '../../components/common/ImageUpload';
+import { AdminSubmitButton } from '../../components/admin/AdminSubmitButton';
 
 export const AdminTestimonialsPage: React.FC = () => {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Testimonial | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -330,6 +333,18 @@ export const AdminTestimonialsPage: React.FC = () => {
             </div>
           </div>
 
+          <div>
+            <ImageUpload
+              label="Client Avatar / Photo (Optional)"
+              helperText="Upload client headshot or company logo avatar"
+              value={formData.avatarUrl}
+              onChange={(url) => setFormData({ ...formData, avatarUrl: url })}
+              onProcessingChange={setIsUploadingAvatar}
+              aspectRatio="avatar"
+              maxDimension={400}
+            />
+          </div>
+
           <div className="pt-4 border-t border-[#262833] flex justify-end gap-3">
             <button
               type="button"
@@ -338,14 +353,15 @@ export const AdminTestimonialsPage: React.FC = () => {
             >
               Cancel
             </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-6 py-2 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+            <AdminSubmitButton
+              loading={saving}
+              isUploading={isUploadingAvatar}
+              loadingText="Saving Testimonial..."
+              uploadingText="Uploading Client Photo..."
+              size="sm"
             >
-              {saving && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-              <span>{saving ? 'Saving...' : 'Save Testimonial'}</span>
-            </button>
+              {editingItem ? 'Update Testimonial' : 'Create Testimonial'}
+            </AdminSubmitButton>
           </div>
         </form>
       </Modal>

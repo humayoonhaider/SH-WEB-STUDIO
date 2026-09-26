@@ -5,6 +5,8 @@ import { api } from '../../services/api';
 import { Modal } from '../../components/common/Modal';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { Spinner } from '../../components/common/Loader';
+import { ImageUpload } from '../../components/common/ImageUpload';
+import { AdminSubmitButton } from '../../components/admin/AdminSubmitButton';
 
 export const AdminProjectsPage: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -12,6 +14,7 @@ export const AdminProjectsPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [isUploadingImg, setIsUploadingImg] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -408,7 +411,7 @@ export const AdminProjectsPage: React.FC = () => {
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-300 mb-1.5">
                 Live URL
@@ -434,19 +437,19 @@ export const AdminProjectsPage: React.FC = () => {
                 className="w-full px-3 py-2 rounded-xl bg-[#17181D] border border-[#262833] text-white text-sm focus:outline-none focus:border-blue-500"
               />
             </div>
+          </div>
 
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-300 mb-1.5">
-                Image / Screenshot URL
-              </label>
-              <input
-                type="url"
-                value={formData.imageUrl}
-                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                placeholder="Optional image URL"
-                className="w-full px-3 py-2 rounded-xl bg-[#17181D] border border-[#262833] text-white text-sm focus:outline-none focus:border-blue-500"
-              />
-            </div>
+          {/* Project Screenshot / Cover Image Upload */}
+          <div className="pt-2">
+            <ImageUpload
+              label="Project Screenshot / Cover Image"
+              helperText="Upload project mockup, UI screenshot, or banner (WebP, PNG, JPG)"
+              value={formData.imageUrl}
+              onChange={(url) => setFormData({ ...formData, imageUrl: url })}
+              onProcessingChange={setIsUploadingImg}
+              aspectRatio="video"
+              maxDimension={1600}
+            />
           </div>
 
           <div>
@@ -492,14 +495,15 @@ export const AdminProjectsPage: React.FC = () => {
             >
               Cancel
             </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-6 py-2 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+            <AdminSubmitButton
+              loading={saving}
+              isUploading={isUploadingImg}
+              loadingText="Saving Project..."
+              uploadingText="Optimizing & Uploading Image..."
+              size="sm"
             >
-              {saving && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-              <span>{saving ? 'Saving...' : 'Save Project'}</span>
-            </button>
+              {editingProject ? 'Update Project' : 'Create Project'}
+            </AdminSubmitButton>
           </div>
         </form>
       </Modal>

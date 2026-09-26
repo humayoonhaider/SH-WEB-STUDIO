@@ -39,6 +39,7 @@ export const SEO: React.FC<SEOProps> = ({
       <title>{siteTitle}</title>
       <meta name="description" content={siteDescription} />
       <meta name="keywords" content={siteKeywords} />
+      <meta name="google-site-verification" content="QJcq_H2XFIcZrSRz9nOmXJE5-0BdoYHtPpFDf25EKl8" />
       <link rel="canonical" href={siteCanonical} />
 
       {/* OpenGraph / Facebook */}
