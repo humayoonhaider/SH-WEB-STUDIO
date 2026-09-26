@@ -45,7 +45,7 @@ app.get('/sitemap.xml', async (_req, res) => {
     }
 
     // 2. Dynamic Fallback
-    const baseUrl = (process.env.SITE_URL || 'https://sh-web-studio.up.railway.app').replace(/\/$/, '');
+    const baseUrl = (process.env.SITE_URL || 'https://shwebstudio.up.railway.app').replace(/\/$/, '');
     const today = new Date().toISOString().split('T')[0];
 
     let dynamicProjects: any[] = [];
@@ -128,7 +128,7 @@ app.get('/sitemap.xml', async (_req, res) => {
     const hardFallback = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://sh-web-studio.up.railway.app/</loc>
+    <loc>https://shwebstudio.up.railway.app/</loc>
     <priority>1.0</priority>
   </url>
 </urlset>`;
@@ -152,7 +152,7 @@ Allow: /
 Disallow: /admin
 Disallow: /api
 
-Sitemap: https://sh-web-studio.up.railway.app/sitemap.xml
+Sitemap: https://shwebstudio.up.railway.app/sitemap.xml
 `;
   res.setHeader('Content-Type', 'text/plain; charset=utf-8');
   res.setHeader('Cache-Control', 'public, max-age=86400');

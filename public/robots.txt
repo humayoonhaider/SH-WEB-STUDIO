@@ -3,5 +3,4 @@ Allow: /
 Disallow: /admin
 Disallow: /api
 
-Sitemap: https://sh-web-studio.up.railway.app/sitemap.xml
-Sitemap: https://shwebstudio.dev/sitemap.xml
+Sitemap: https://shwebstudio.up.railway.app/sitemap.xml
