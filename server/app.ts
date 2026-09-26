@@ -86,17 +86,7 @@ app.get('/sitemap.xml', async (req, res) => {
         const lastMod = project.updatedAt
           ? new Date(project.updatedAt).toISOString().split('T')[0]
           : today;
-        xml += `  <url>\n    <loc>${baseUrl}/work/${project.slug}</loc>\n    <lastmod>${lastMod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>\n`;
-      }
-    }
-
-    // Add dynamic service routes
-    for (const service of services) {
-      if (service?.slug) {
-        const lastMod = service.updatedAt
-          ? new Date(service.updatedAt).toISOString().split('T')[0]
-          : today;
-        xml += `  <url>\n    <loc>${baseUrl}/services#${service.slug}</loc>\n    <lastmod>${lastMod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>\n`;
+        xml += `  <url>\n    <loc>${baseUrl}/work/${encodeURIComponent(project.slug)}</loc>\n    <lastmod>${lastMod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>\n`;
       }
     }
 
