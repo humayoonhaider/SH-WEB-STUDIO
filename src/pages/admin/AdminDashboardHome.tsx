@@ -19,12 +19,14 @@ import { api } from '../../services/api';
 import { Spinner } from '../../components/common/Loader';
 import { useAuth } from '../../context/AuthContext';
 import { InquiryAnalyticsChart } from '../../components/admin/InquiryAnalyticsChart';
+import { RefreshCw, Database, AlertCircle } from 'lucide-react';
 
 export const AdminDashboardHome: React.FC = () => {
   const { admin } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [storageStatus, setStorageStatus] = useState<any>(null);
+  const [retryingAtlas, setRetryingAtlas] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -42,6 +44,21 @@ export const AdminDashboardHome: React.FC = () => {
       // stats error fallback
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRetryAtlas = async () => {
+    setRetryingAtlas(true);
+    try {
+      const res = await api.system.retryAtlas();
+      if (res.data) {
+        setStorageStatus(res.data);
+      }
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRetryingAtlas(false);
     }
   };
 
@@ -105,31 +122,42 @@ export const AdminDashboardHome: React.FC = () => {
     <div className="space-y-10">
       {/* Storage Status Notice */}
       {storageStatus && (
-        <div className={`p-4 rounded-2xl border ${storageStatus.isAtlasConnected ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-amber-500/5 border-amber-500/20'} flex flex-col sm:flex-row sm:items-center justify-between gap-4`}>
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl ${storageStatus.isAtlasConnected ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'} flex items-center justify-center shrink-0`}>
-              <CheckCircle2 className="w-5 h-5" />
+        <div className={`p-4 sm:p-5 rounded-2xl border ${storageStatus.isAtlasConnected ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-amber-500/5 border-amber-500/20'} flex flex-col md:flex-row md:items-center justify-between gap-4`}>
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className={`w-10 h-10 rounded-xl ${storageStatus.isAtlasConnected ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'} flex items-center justify-center shrink-0 mt-0.5 sm:mt-0`}>
+              {storageStatus.isAtlasConnected ? (
+                <Database className="w-5 h-5 text-emerald-400" />
+              ) : (
+                <AlertCircle className="w-5 h-5 text-amber-400" />
+              )}
             </div>
             <div>
-              <p className="text-sm font-semibold text-white">
-                Storage: {storageStatus.storageMode === 'atlas' ? 'MongoDB Atlas Cluster' : 'Persistent Local Storage'}
-              </p>
-              <p className="text-xs text-neutral-400 mt-0.5">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold text-white">
+                  Storage Mode: {storageStatus.storageMode === 'atlas' ? 'MongoDB Atlas (Cloud Database)' : 'Local File Storage'}
+                </p>
+                <span className={`text-[10px] font-mono px-2 py-0.5 rounded-md uppercase font-bold ${storageStatus.isAtlasConnected ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'}`}>
+                  {storageStatus.isAtlasConnected ? 'LIVE' : 'FALLBACK'}
+                </span>
+              </div>
+              <p className="text-xs text-neutral-300 mt-1">
                 {storageStatus.notice}
               </p>
               {!storageStatus.isAtlasConnected && (
-                <p className="text-[10px] text-amber-500/80 mt-1.5 font-medium italic">
-                  Tip: Ensure your Atlas password is correct and IP 0.0.0.0/0 is whitelisted in Atlas Network Access.
+                <p className="text-[11px] text-amber-400/90 mt-1 font-medium">
+                  Quick Fix: 1. Add <code className="bg-neutral-800 px-1 py-0.5 rounded text-amber-300 font-mono">0.0.0.0/0</code> in MongoDB Atlas Network Access. 2. Set <code className="bg-neutral-800 px-1 py-0.5 rounded text-amber-300 font-mono">MONGODB_URI</code> in Railway Variables.
                 </p>
               )}
             </div>
           </div>
           {!storageStatus.isAtlasConnected && (
             <button 
-              onClick={() => api.system.retryAtlas().then(() => fetchData())}
-              className="px-4 py-2 rounded-xl bg-[#17181D] border border-[#262833] text-xs font-semibold text-white hover:bg-[#20222C] transition-colors shrink-0"
+              onClick={handleRetryAtlas}
+              disabled={retryingAtlas}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-xs font-semibold text-amber-200 disabled:opacity-50 transition-all shrink-0 cursor-pointer"
             >
-              Retry Cloud Connection
+              <RefreshCw className={`w-3.5 h-3.5 ${retryingAtlas ? 'animate-spin' : ''}`} />
+              <span>{retryingAtlas ? 'Connecting to Atlas...' : 'Test & Connect Atlas'}</span>
             </button>
           )}
         </div>

@@ -12,53 +12,91 @@ let dbStatusDetails = {
   storageMode: 'local' as 'atlas' | 'local',
   clusterHost: null as string | null,
   notice: '',
+  lastError: null as string | null,
 };
 
-export const connectDB = async (): Promise<boolean> => {
-  const mongoURI = process.env.MONGODB_URI?.trim();
+let autoRetryTimer: NodeJS.Timeout | null = null;
 
-  if (!mongoURI || mongoURI.includes('<password>') || mongoURI.includes('<db_username>')) {
+export const connectDB = async (): Promise<boolean> => {
+  // Clean surrounding quotes or whitespaces
+  let mongoURI = process.env.MONGODB_URI?.trim();
+  if (mongoURI) {
+    mongoURI = mongoURI.replace(/^["']|["']$/g, '').trim();
+  }
+
+  if (!mongoURI || mongoURI.includes('<password>') || mongoURI.includes('<db_username>') || mongoURI.includes('YOUR_PASSWORD')) {
     dbStatusDetails = {
       isAtlasConnected: false,
       storageMode: 'local',
       clusterHost: null,
-      notice: 'No MONGODB_URI configured. Running in persistent local storage mode.',
+      notice: 'MONGODB_URI environment variable is missing or contains placeholder credentials in Railway. Add MONGODB_URI in Railway -> Variables.',
+      lastError: 'Missing or placeholder MONGODB_URI',
     };
-    console.log('[Storage] Initialized with persistent local data store.');
+    console.log('[Storage] Initialized with persistent local data store. Add MONGODB_URI to connect MongoDB Atlas.');
     return false;
   }
 
   try {
     const conn = await mongoose.connect(mongoURI, {
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 5000,
-      socketTimeoutMS: 15000,
+      serverSelectionTimeoutMS: 15000,
+      connectTimeoutMS: 15000,
+      socketTimeoutMS: 30000,
+      maxPoolSize: 10,
+      minPoolSize: 1,
     });
+
     isMongooseConnected = true;
     dbStatusDetails = {
       isAtlasConnected: true,
       storageMode: 'atlas',
-      clusterHost: conn.connection.host || 'MongoDB Atlas',
-      notice: 'Successfully connected to MongoDB Atlas cluster.',
+      clusterHost: conn.connection.host || 'MongoDB Atlas Cluster',
+      notice: `Connected to MongoDB Atlas (${conn.connection.host})`,
+      lastError: null,
     };
-    console.log(`[Storage] ✅ Atlas Connected: ${conn.connection.host}`);
+    console.log(`[Storage] ✅ MongoDB Atlas Connected: ${conn.connection.host}`);
+
+    if (autoRetryTimer) {
+      clearInterval(autoRetryTimer);
+      autoRetryTimer = null;
+    }
+
     return true;
   } catch (err: any) {
     isMongooseConnected = false;
     await mongoose.disconnect().catch(() => {});
 
-    const isAuthError = err.message?.includes('auth') || err.message?.includes('authentication');
-    const notice = isAuthError
-      ? 'MongoDB Atlas authentication failed (check credentials in MONGODB_URI). Application is running seamlessly in persistent local storage mode.'
-      : 'MongoDB Atlas connection unavailable (requires 0.0.0.0/0 IP whitelisting in Atlas). Application is running seamlessly in persistent local storage mode.';
+    const errMsg = err?.message || 'Unknown connection error';
+    const isAuthError = errMsg.includes('auth') || errMsg.includes('authentication') || errMsg.includes('bad auth');
+    const isIpError = errMsg.includes('timed out') || errMsg.includes('selection timed out') || errMsg.includes('ECONNREFUSED') || errMsg.includes('ENOTFOUND');
+
+    let notice = '';
+    if (isAuthError) {
+      notice = 'MongoDB Atlas authentication failed. Please check username & password in Railway MONGODB_URI (URL encode special characters like @ as %40).';
+    } else if (isIpError) {
+      notice = 'MongoDB Atlas connection timed out. Railway IP is blocked. Go to MongoDB Atlas -> Network Access -> Add IP Address -> Select "Allow Access from Anywhere" (0.0.0.0/0).';
+    } else {
+      notice = `MongoDB Atlas error: ${errMsg}`;
+    }
 
     dbStatusDetails = {
       isAtlasConnected: false,
       storageMode: 'local',
       clusterHost: null,
       notice,
+      lastError: errMsg,
     };
-    console.log(`[Storage] Note: ${notice} (${err.message})`);
+    console.warn(`[Storage] Atlas connection attempt failed: ${notice} (${errMsg})`);
+
+    // Start background auto-retry if not already running
+    if (!autoRetryTimer && mongoURI) {
+      autoRetryTimer = setInterval(async () => {
+        if (!isMongooseConnected) {
+          console.log('[Storage] Background retry connecting to MongoDB Atlas...');
+          await connectDB();
+        }
+      }, 30000);
+    }
+
     return false;
   }
 };

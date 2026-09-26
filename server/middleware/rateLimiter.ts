@@ -25,6 +25,12 @@ export function createRateLimiter(options: { windowMs: number; maxRequests: numb
       return next();
     }
     
+    // Automatically whitelist Googlebot, Search Console Inspection tools, and major crawlers
+    const userAgent = (req.headers['user-agent'] || '').toLowerCase();
+    if (userAgent.includes('googlebot') || userAgent.includes('inspectiontool') || userAgent.includes('google-') || userAgent.includes('bingbot')) {
+      return next();
+    }
+
     // Extract real client IP behind proxy (e.g. Railway, Cloudflare)
     const xff = req.headers['x-forwarded-for'];
     const forwardedIp = typeof xff === 'string' ? xff.split(',')[0].trim() : Array.isArray(xff) ? xff[0] : null;
