@@ -137,6 +137,21 @@ app.get('/sitemap.xml', async (_req, res) => {
   }
 });
 
+// Explicit Google Search Console HTML File Verification Route
+app.get('/googleQJcq_H2XFIcZrSRz9nOmXJE5-0BdoYHtPpFDf25EKl8.html', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.status(200).send('google-site-verification: googleQJcq_H2XFIcZrSRz9nOmXJE5-0BdoYHtPpFDf25EKl8.html');
+});
+
+// Generic Google Verification fallback route
+app.get('/google:code.html', (req, res) => {
+  const code = req.params.code;
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.status(200).send(`google-site-verification: google${code}.html`);
+});
+
 // Dynamic Robots.txt Route
 app.get('/robots.txt', (_req, res) => {
   const robotsPath = path.resolve(process.cwd(), 'public', 'robots.txt');
