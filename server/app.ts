@@ -137,7 +137,13 @@ app.get('/sitemap.xml', async (_req, res) => {
   }
 });
 
-// Explicit Google Search Console HTML File Verification Route
+// Explicit Google Search Console HTML File Verification Routes
+app.get('/googlea17172bb37818be6.html', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.status(200).send('google-site-verification: googlea17172bb37818be6.html');
+});
+
 app.get('/googleQJcq_H2XFIcZrSRz9nOmXJE5-0BdoYHtPpFDf25EKl8.html', (_req, res) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'public, max-age=86400');
