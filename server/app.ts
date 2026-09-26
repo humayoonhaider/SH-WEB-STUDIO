@@ -15,8 +15,7 @@ import pricingRoutes from './routes/pricingRoutes.js';
 import mediaRoutes from './routes/mediaRoutes.js';
 import { seedInitialData } from './seed/seedData.js';
 import { errorHandler } from './middleware/errorHandler.js';
-
-import { ProjectModel, ServiceModel } from './models/schemas.js';
+import { Project, Service } from './models/index.js';
 
 const app = express();
 
@@ -51,19 +50,10 @@ app.get('/sitemap.xml', async (req, res) => {
 
     // Safely query dynamic models with timeout protection
     try {
-      const results = await Promise.race([
-        Promise.all([
-          ProjectModel.find({ isActive: true }).select('slug updatedAt').lean(),
-          ServiceModel.find({ isActive: true }).select('slug updatedAt').lean(),
-        ]),
-        new Promise<[any[], any[]]>((_, reject) =>
-          setTimeout(() => reject(new Error('DB Timeout')), 1500)
-        ),
-      ]);
-      projects = results[0] || [];
-      services = results[1] || [];
+      projects = await Project.find({ isActive: true });
+      services = await Service.find({ isActive: true });
     } catch {
-      // Graceful fallback to static defaults if DB is slow/connecting
+      // Graceful fallback to static defaults if storage is initialising
       projects = [
         { slug: 'e-commerce-shop', updatedAt: new Date() },
         { slug: 'intelligence-hub', updatedAt: new Date() },
