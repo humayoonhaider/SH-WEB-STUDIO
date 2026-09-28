@@ -83,7 +83,11 @@ export const ProjectsPage: React.FC = () => {
                 key={project._id}
                 className="group flex flex-col rounded-2xl bg-[#121318] border border-[#262833] overflow-hidden transition-all duration-200 hover:border-neutral-600 hover:bg-[#15161D]"
               >
-                <div className="relative aspect-[16/10] bg-[#17181D] border-b border-[#262833] overflow-hidden flex items-center justify-center p-6">
+                <Link
+                  to={`/work/${encodeURIComponent(project.slug || project._id)}`}
+                  className="relative aspect-[16/10] bg-[#17181D] border-b border-[#262833] overflow-hidden flex items-center justify-center block group/visual cursor-pointer"
+                  aria-label={`View case details for ${project.title}`}
+                >
                   {project.imageUrl ? (
                     <img
                       src={project.imageUrl}
@@ -92,6 +96,13 @@ export const ProjectsPage: React.FC = () => {
                     />
                   ) : (
                     <div className="w-full h-full rounded-xl bg-gradient-to-br from-[#1C1D24] to-[#121318] border border-[#262833] p-5 flex flex-col justify-between relative overflow-hidden">
+                      <div
+                        className="absolute inset-0 opacity-[0.05]"
+                        style={{
+                          backgroundImage: `radial-gradient(#ffffff 1px, transparent 1px)`,
+                          backgroundSize: '16px 16px',
+                        }}
+                      />
                       <div className="flex items-center justify-between text-xs text-neutral-500 font-mono">
                         <span>{project.category}</span>
                         <Laptop className="w-4 h-4 text-blue-400/80" />
@@ -108,11 +119,11 @@ export const ProjectsPage: React.FC = () => {
                   )}
 
                   {project.featured && (
-                    <div className="absolute top-3 right-3 text-[10px] font-semibold uppercase tracking-wider bg-blue-600/90 text-white px-2.5 py-1 rounded-md shadow-sm">
+                    <div className="absolute top-3 right-3 text-[10px] font-semibold uppercase tracking-wider bg-blue-600/90 text-white px-2.5 py-1 rounded-md shadow-sm pointer-events-none">
                       Featured
                     </div>
                   )}
-                </div>
+                </Link>
 
                 <div className="p-6 flex-1 flex flex-col justify-between space-y-5">
                   <div className="space-y-3">
@@ -121,7 +132,7 @@ export const ProjectsPage: React.FC = () => {
                     </div>
 
                     <h3 className="text-xl font-bold text-white font-heading tracking-tight group-hover:text-blue-400 transition-colors">
-                      <Link to={`/work/${project.slug}`}>
+                      <Link to={`/work/${encodeURIComponent(project.slug || project._id)}`}>
                         {project.title}
                       </Link>
                     </h3>
@@ -147,11 +158,11 @@ export const ProjectsPage: React.FC = () => {
 
                     <div className="flex items-center justify-between pt-2">
                       <Link
-                        to={`/work/${project.slug}`}
-                        className="text-xs font-semibold text-neutral-300 hover:text-white inline-flex items-center gap-1.5"
+                        to={`/work/${encodeURIComponent(project.slug || project._id)}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1C1D26] hover:bg-blue-600 border border-[#2B2D3A] hover:border-blue-500 text-xs font-semibold text-neutral-200 hover:text-white transition-all shadow-sm group/btn"
                       >
-                        <span>Details</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
+                        <span>Case Details</span>
+                        <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover/btn:translate-x-0.5" />
                       </Link>
 
                       <div className="flex items-center gap-3">

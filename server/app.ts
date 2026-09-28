@@ -15,6 +15,10 @@ import statsRoutes from './routes/statsRoutes.js';
 import testimonialRoutes from './routes/testimonialRoutes.js';
 import pricingRoutes from './routes/pricingRoutes.js';
 import mediaRoutes from './routes/mediaRoutes.js';
+import userAuthRoutes from './routes/userAuthRoutes.js';
+import referralRoutes from './routes/referralRoutes.js';
+import adminReferralRoutes from './routes/adminReferralRoutes.js';
+import chatRoutes from './routes/chatRoutes.js';
 import { seedInitialData } from './seed/seedData.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { Project, Service } from './models/index.js';
@@ -104,6 +108,12 @@ app.get('/sitemap.xml', async (_req, res) => {
     <lastmod>${today}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/referral-program</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
   </url>
   <url>
     <loc>${baseUrl}/work/e-commerce-shop</loc>
@@ -241,6 +251,9 @@ app.post('/api/system/seed-defaults', async (req, res) => {
 
 // Mount Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/user/auth', userAuthRoutes);
+app.use('/api/referrals', referralRoutes);
+app.use('/api/admin/referrals', adminReferralRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/services', servicesRoutes);
 app.use('/api/projects', projectsRoutes);
@@ -252,6 +265,7 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/testimonials', testimonialRoutes);
 app.use('/api/pricing', pricingRoutes);
 app.use('/api/media', mediaRoutes);
+app.use('/api/chat', chatRoutes);
 
 // 404 for unhandled API endpoints
 app.all('/api/*', (_req, res) => {

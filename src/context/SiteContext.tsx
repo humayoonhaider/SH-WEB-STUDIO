@@ -39,6 +39,13 @@ const defaultSettings: SiteSettings = {
   ctaTitle: 'Have a project in mind?',
   ctaDescription: "Tell us what you're building and let's discuss how we can turn the idea into a practical digital solution.",
   footerText: '© 2026 SH Web Studio. All rights reserved.',
+  showTopOfferBanner: true,
+  topOfferBadgeText: '🔥 LIMITED TIME EXCLUSIVE',
+  topOfferTitle: 'Refer businesses & earn 10% direct commission on web development projects',
+  topOfferHighlightText: '10% Direct Cut',
+  topOfferButtonText: 'Claim Your Partner Link',
+  topOfferButtonUrl: '/referral-program',
+  topOfferExpiryText: 'Limited partner slots available',
   customPortfolios: [],
 };
 
