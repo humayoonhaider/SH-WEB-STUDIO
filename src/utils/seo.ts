@@ -3,7 +3,7 @@
  * Manages dynamic canonical URLs and metadata generation
  */
 
-const SITE_BASE_URL = 'https://shwebstudio.up.railway.app';
+const SITE_BASE_URL = 'https://sh-web-studio.up.railway.app';
 
 /**
  * Generates a clean canonical URL for the current path

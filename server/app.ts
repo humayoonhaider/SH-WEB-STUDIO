@@ -49,7 +49,9 @@ app.get('/sitemap.xml', async (req, res) => {
     }
 
     // 2. Dynamic Fallback
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.get('host');
+    const baseUrl = `${protocol}://${host}`;
     const today = new Date().toISOString().split('T')[0];
 
     let dynamicProjects: any[] = [];
@@ -66,68 +68,33 @@ app.get('/sitemap.xml', async (req, res) => {
     <lastmod>${today}</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
-  </url>
+  </url>`;
+
+    // Add static pages
+    const staticPages = ['services', 'work', 'about', 'reviews', 'contact', 'pricing', 'process', 'referral-program'];
+    staticPages.forEach(page => {
+      xml += `
   <url>
-    <loc>${baseUrl}/services</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>${baseUrl}/work</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>${baseUrl}/about</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>${baseUrl}/reviews</loc>
+    <loc>${baseUrl}/${page}</loc>
     <lastmod>${today}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-  </url>
+  </url>`;
+    });
+
+    // Add dynamic projects
+    dynamicProjects.forEach(project => {
+      const slug = project.slug || project._id;
+      xml += `
   <url>
-    <loc>${baseUrl}/contact</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>${baseUrl}/pricing</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>${baseUrl}/process</loc>
+    <loc>${baseUrl}/work/${slug}</loc>
     <lastmod>${today}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>${baseUrl}/referral-program</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>${baseUrl}/work/e-commerce-shop</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>${baseUrl}/work/intelligence-hub</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-</urlset>`;
+  </url>`;
+    });
+
+    xml += '\n</urlset>';
 
     res.setHeader('Content-Type', 'application/xml; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
@@ -135,10 +102,12 @@ app.get('/sitemap.xml', async (req, res) => {
     return res.status(200).send(xml);
   } catch (error) {
     console.error('Sitemap critical fallback error:', error);
+    const host = req.get('host') || 'sh-web-studio.up.railway.app';
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
     const hardFallback = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://shwebstudio.up.railway.app/</loc>
+    <loc>${protocol}://${host}/</loc>
     <priority>1.0</priority>
   </url>
 </urlset>`;
@@ -178,8 +147,10 @@ app.get('/robots.txt', (req, res) => {
     return res.status(200).send(content);
   }
 
-  const baseUrl = `${req.protocol}://${req.get('host')}`;
-  const defaultRobots = `User-agent: *
+    const host = req.get('host') || 'sh-web-studio.up.railway.app';
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+    const baseUrl = `${protocol}://${host}`;
+    const defaultRobots = `User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /api
@@ -272,8 +243,5 @@ app.use('/api/chat', chatRoutes);
 app.all('/api/*', (_req, res) => {
   res.status(404).json({ success: false, message: 'API endpoint not found.' });
 });
-
-// Centralized error handler
-app.use(errorHandler);
 
 export default app;

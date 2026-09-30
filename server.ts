@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import app from './server/app.js';
 import { connectDB } from './server/config/db.js';
 import { seedInitialData } from './server/seed/seedData.js';
+import { errorHandler } from './server/middleware/errorHandler.js';
 
 dotenv.config();
 
@@ -25,19 +26,6 @@ async function startServer() {
       });
       app.use(vite.middlewares);
       console.log('🚀 Vite dev middleware attached');
-
-      // Fallback to serving index.html if Vite doesn't catch it
-      app.get('*', async (req, res, next) => {
-        try {
-          const url = req.originalUrl;
-          const fs = await import('fs');
-          const template = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8');
-          const html = await vite.transformIndexHtml(url, template);
-          res.status(200).set({ 'Content-Type': 'text/html' }).end(html);
-        } catch (e) {
-          next(e);
-        }
-      });
     } else {
       const distPath = path.resolve(__dirname, 'dist');
       const express = (await import('express')).default;
@@ -46,33 +34,51 @@ async function startServer() {
       if (fs.existsSync(distPath)) {
         app.use(express.static(distPath, {
           maxAge: '1d',
-          index: false // We handle index via catch-all
+          index: false 
         }));
-
-        app.get('*', (req, res) => {
-          const indexPath = path.resolve(distPath, 'index.html');
-          if (fs.existsSync(indexPath)) {
-            res.sendFile(indexPath);
-          } else {
-            console.error('❌ Production index.html missing at:', indexPath);
-            res.status(500).send('Production build is incomplete. Please run npm run build.');
-          }
-        });
         console.log(`📦 Serving production build from ${distPath}`);
       } else {
         console.warn('⚠️ dist directory not found. Fallback to serving index.html from root.');
-        app.get('*', (_req, res) => {
-          const indexPath = path.resolve(__dirname, 'index.html');
-          if (fs.existsSync(indexPath)) {
-            res.sendFile(indexPath);
-          } else {
-            res.status(500).send('No build found and root index.html missing. Please run npm run build.');
-          }
-        });
       }
     }
 
-    // 2. Start Listening (Immediate responsiveness)
+    // Define the catch-all route handler (must be registered BEFORE the error handler)
+    // We register it here but it will be executed after other middleware
+    app.get('*', async (req, res, next) => {
+      try {
+        const url = req.originalUrl;
+        const fs = await import('fs');
+        const isProd = process.env.NODE_ENV === 'production';
+        
+        if (!isProd) {
+          // Dev mode Vite transform
+          const { createServer: createViteServer } = await import('vite');
+          const vite = await createViteServer({ server: { middlewareMode: true }, appType: 'spa' });
+          const template = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8');
+          const html = await vite.transformIndexHtml(url, template);
+          return res.status(200).set({ 'Content-Type': 'text/html' }).end(html);
+        } else {
+          // Prod mode file serving
+          const distPath = path.resolve(__dirname, 'dist');
+          const indexPath = fs.existsSync(path.join(distPath, 'index.html')) 
+            ? path.join(distPath, 'index.html') 
+            : path.resolve(__dirname, 'index.html');
+            
+          if (fs.existsSync(indexPath)) {
+            return res.sendFile(indexPath);
+          } else {
+            return res.status(500).send('Critical Error: index.html not found. Please check deployment build.');
+          }
+        }
+      } catch (e) {
+        next(e);
+      }
+    });
+
+    // 3. Centralized error handler (MUST be registered after all routes)
+    app.use(errorHandler);
+
+    // 4. Start Listening (Immediate responsiveness)
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`⚡ Server running on http://0.0.0.0:${PORT}`);
       console.log(`🛡️  Admin route accessible at http://0.0.0.0:${PORT}/admin/login`);

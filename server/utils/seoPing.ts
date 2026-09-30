@@ -4,7 +4,7 @@
  */
 
 export const pingSearchEngines = async (host?: string) => {
-  const baseUrl = host ? `https://${host}` : process.env.SITE_URL || 'https://shwebstudio.up.railway.app';
+  const baseUrl = host ? `https://${host}` : process.env.SITE_URL || 'https://sh-web-studio.up.railway.app';
   const sitemapUrl = `${baseUrl}/sitemap.xml`;
   
   console.log(`[SEO] Initiating search engine ping for sitemap: ${sitemapUrl}`);
