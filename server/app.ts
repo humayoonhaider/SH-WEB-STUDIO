@@ -32,16 +32,23 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 app.use(cors({
-  origin: '*',
+  origin: (origin, callback) => {
+    // Allow all origins but echo them back for credentials support
+    callback(null, true);
+  },
   credentials: true,
 }));
 
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
-// 1. Health Check (Immediate response, no DB)
+// 1. Health Check (Immediate response, no DB, critical for Railway)
 app.get('/api/health', (_req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.status(200).json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV || 'development'
+  });
 });
 
 // 2. Optimized Sitemap.xml
@@ -84,7 +91,14 @@ app.get('/sitemap.xml', async (req, res) => {
 app.get('/robots.txt', (req, res) => {
   const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
   const host = req.get('host') || 'sh-web-studio.up.railway.app';
-  const content = `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api\n\nSitemap: ${protocol}://${host}/sitemap.xml`;
+  const content = `User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /login
+Disallow: /register
+
+Sitemap: ${protocol}://${host}/sitemap.xml`;
   res.header('Content-Type', 'text/plain').send(content);
 });
 

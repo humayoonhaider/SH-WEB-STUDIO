@@ -10,24 +10,23 @@ export const errorHandler = (
   let message = err.message || 'Internal Server Error';
 
   // Handle Database Connection / Timeout Errors Specifically
+  const errMessage = err?.message || '';
   const isDatabaseError = 
     err?.name === 'MongooseError' || 
     err?.name === 'MongoNetworkError' || 
     err?.name === 'MongoServerSelectionError' ||
-    err?.message?.includes('buffering timed out') ||
-    err?.message?.includes('selection timed out');
+    (typeof errMessage === 'string' && (
+      errMessage.includes('buffering timed out') || 
+      errMessage.includes('selection timed out') ||
+      errMessage.includes('connection timed out')
+    ));
 
   if (isDatabaseError) {
-    console.warn(`[Storage] Database issue detected on ${req.method} ${req.url}: ${err.message}`);
+    console.warn(`[Storage-Alert] Database issue on ${req.method} ${req.url}: ${errMessage}`);
     
-    // If it's a GET request and not for the API, we try to serve the page anyway 
-    // (the server.ts catch-all will usually handle this, but if we're here, something failed)
     if (req.method === 'GET' && !req.path.startsWith('/api/')) {
-      statusCode = 200; // Fake success or 503? Google prefers 503 for temporary DB issues, 
-      // but if we can serve the page with stale/fallback data, 200 is better.
-      // However, for pure crash prevention, we'll stick to a clean 503 for crawlers if DB is dead.
       statusCode = 503; 
-      message = 'Our services are currently undergoing optimization. Please refresh in a moment.';
+      message = 'The studio is currently optimizing performance. Please check back in a few seconds.';
     }
   }
 

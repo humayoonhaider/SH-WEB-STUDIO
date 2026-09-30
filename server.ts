@@ -20,6 +20,20 @@ async function startServer() {
   try {
     console.log(`[System] Initializing in ${isProduction ? 'PROD' : 'DEV'} mode...`);
 
+    // Monitor all requests to catch 5xx triggers
+    app.use((req, res, next) => {
+      const start = Date.now();
+      res.on('finish', () => {
+        const duration = Date.now() - start;
+        if (res.statusCode >= 500) {
+          console.error(`🚨 [5XX ERROR] ${req.method} ${req.originalUrl} -> Status: ${res.statusCode} (${duration}ms)`);
+        } else if (req.path.includes('google') || req.path.includes('sitemap') || req.path.includes('robots')) {
+          console.log(`🔍 [SEO-CRAWL] ${req.method} ${req.originalUrl} -> Status: ${res.statusCode} (${duration}ms)`);
+        }
+      });
+      next();
+    });
+
     let vite: any;
     if (!isProduction) {
       try {
