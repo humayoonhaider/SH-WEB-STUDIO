@@ -535,9 +535,59 @@ export const ReferralSettingsSchema = new Schema<IReferralSettings>({
   termsText: { type: String, default: 'Referral commission is 10% on qualifying payments made by clients you refer. Payouts require admin verification of cleared client funds.' },
 }, { timestamps: true });
 
+// 16. Withdrawal Request Interface & Schema
+export interface IWithdrawalRequest extends Document {
+  user: string; // User ID
+  userName?: string;
+  userEmail?: string;
+  amount: number;
+  currency: string;
+  payoutMethod: string;
+  accountNumber: string;
+  accountHolderName: string;
+  bankName?: string;
+  notes?: string;
+  status: 'pending' | 'approved' | 'paid' | 'rejected';
+  adminNote?: string;
+  payoutReference?: string;
+  requestedAt: Date;
+  approvedAt?: Date;
+  paidAt?: Date;
+  rejectedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export const WithdrawalRequestSchema = new Schema<IWithdrawalRequest>({
+  user: { type: String, required: true, index: true },
+  userName: { type: String, default: '' },
+  userEmail: { type: String, default: '' },
+  amount: { type: Number, required: true, min: 1 },
+  currency: { type: String, default: 'USD', uppercase: true },
+  payoutMethod: { type: String, required: true, default: 'JazzCash' },
+  accountNumber: { type: String, required: true },
+  accountHolderName: { type: String, required: true },
+  bankName: { type: String, default: '' },
+  notes: { type: String, default: '' },
+  status: {
+    type: String,
+    enum: ['pending', 'approved', 'paid', 'rejected'],
+    default: 'pending',
+    index: true,
+  },
+  adminNote: { type: String, default: '' },
+  payoutReference: { type: String, default: '' },
+  requestedAt: { type: Date, default: Date.now },
+  approvedAt: { type: Date },
+  paidAt: { type: Date },
+  rejectedAt: { type: Date },
+}, { timestamps: true });
+
 export const UserModel = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
 export const ReferralModel = mongoose.models.Referral || mongoose.model<IReferral>('Referral', ReferralSchema);
 export const PaymentModel = mongoose.models.Payment || mongoose.model<IPayment>('Payment', PaymentSchema);
 export const CommissionModel = mongoose.models.Commission || mongoose.model<ICommission>('Commission', CommissionSchema);
 export const ReferralSettingsModel = mongoose.models.ReferralSettings || mongoose.model<IReferralSettings>('ReferralSettings', ReferralSettingsSchema);
+export const WithdrawalRequestModel = mongoose.models.WithdrawalRequest || mongoose.model<IWithdrawalRequest>('WithdrawalRequest', WithdrawalRequestSchema);
+
 

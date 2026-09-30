@@ -20,6 +20,11 @@ import {
   Save,
   ShieldCheck,
   RefreshCw,
+  Wallet,
+  ArrowDownCircle,
+  X,
+  Receipt,
+  Download,
 } from 'lucide-react';
 import { useUserAuth } from '../../context/UserAuthContext';
 import { api } from '../../services/api';
@@ -29,7 +34,7 @@ import { Spinner } from '../../components/common/Loader';
 export const UserDashboardPage: React.FC = () => {
   const { user, logout, updateUser } = useUserAuth();
 
-  const [stats, setStats] = useState<UserReferralStats>({
+  const [stats, setStats] = useState<UserReferralStats & { availableBalance?: number }>({
     totalReferrals: 0,
     registeredReferrals: 0,
     qualifiedReferrals: 0,
@@ -39,6 +44,7 @@ export const UserDashboardPage: React.FC = () => {
     pendingCommission: 0,
     approvedCommission: 0,
     paidCommission: 0,
+    availableBalance: 0,
     currency: 'USD',
   });
 
@@ -47,9 +53,27 @@ export const UserDashboardPage: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [shareSuccess, setShareSuccess] = useState(false);
 
+  // Self-Withdrawal Modal State
+  const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawMethod, setWithdrawMethod] = useState<'JazzCash' | 'Easypaisa' | 'Bank Transfer' | 'SadaPay' | 'PayPal' | 'Crypto'>('JazzCash');
+  const [withdrawAccount, setWithdrawAccount] = useState('');
+  const [withdrawAccountTitle, setWithdrawAccountTitle] = useState('');
+  const [withdrawBankName, setWithdrawBankName] = useState('');
+  const [withdrawNotes, setWithdrawNotes] = useState('');
+  const [submittingWithdraw, setSubmittingWithdraw] = useState(false);
+  const [withdrawSuccessReceipt, setWithdrawSuccessReceipt] = useState<{
+    transactionId: string;
+    amount: number;
+    payoutMethod: string;
+    payoutDetails: string;
+    status: string;
+    processedAt: string;
+  } | null>(null);
+
   // Payout Details Form State
   const [paymentForm, setPaymentForm] = useState<UserPaymentDetails>({
-    method: 'Bank Transfer',
+    method: 'JazzCash',
     accountHolderName: '',
     bankName: '',
     accountNumber: '',
@@ -98,7 +122,7 @@ export const UserDashboardPage: React.FC = () => {
   useEffect(() => {
     if (user) {
       setPaymentForm({
-        method: user.paymentDetails?.method || 'Bank Transfer',
+        method: user.paymentDetails?.method || 'JazzCash',
         accountHolderName: user.paymentDetails?.accountHolderName || user.name || '',
         bankName: user.paymentDetails?.bankName || '',
         accountNumber: user.paymentDetails?.accountNumber || '',
@@ -111,6 +135,14 @@ export const UserDashboardPage: React.FC = () => {
         phone: user.phone || '',
         company: user.company || '',
       });
+
+      // Pre-fill withdrawal form if user has saved details
+      setWithdrawAccount(user.paymentDetails?.accountNumber || '');
+      setWithdrawAccountTitle(user.paymentDetails?.accountHolderName || user.name || '');
+      setWithdrawBankName(user.paymentDetails?.bankName || '');
+      if (user.paymentDetails?.method) {
+        setWithdrawMethod(user.paymentDetails.method as any);
+      }
     }
   }, [user]);
 
@@ -190,10 +222,62 @@ export const UserDashboardPage: React.FC = () => {
     }
   };
 
+  // Self-Withdrawal Handler
+  const handleExecuteWithdrawal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amountNum = Number(withdrawAmount);
+
+    const available = Number(stats.availableBalance ?? (stats.approvedCommission + stats.pendingCommission));
+
+    if (!amountNum || amountNum <= 0) {
+      alert('Please enter a valid withdrawal amount.');
+      return;
+    }
+
+    if (amountNum > available) {
+      alert(`Withdrawal amount cannot exceed your available balance ($${available}).`);
+      return;
+    }
+
+    if (!withdrawAccount.trim()) {
+      alert('Please provide your account / phone / wallet number.');
+      return;
+    }
+
+    setSubmittingWithdraw(true);
+    try {
+      const res = await api.referrals.requestWithdrawal({
+        amount: amountNum,
+        payoutMethod: withdrawMethod,
+        accountNumber: withdrawAccount,
+        accountHolderName: withdrawAccountTitle,
+        bankName: withdrawBankName,
+        notes: withdrawNotes,
+      });
+
+      if (res.success && res.data) {
+        setWithdrawSuccessReceipt(res.data);
+        setWithdrawModalOpen(false);
+        setWithdrawAmount('');
+        fetchDashboardData();
+      } else {
+        alert(res.message || 'Failed to process withdrawal.');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error during withdrawal processing.');
+    } finally {
+      setSubmittingWithdraw(false);
+    }
+  };
+
+  const currentAvailableBalance = Number(
+    stats.availableBalance ?? (stats.approvedCommission + stats.pendingCommission)
+  );
+
   return (
-    <div className="pt-28 pb-20 min-h-screen bg-[#0B0B0F] px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
+    <div className="pt-12 pb-20 min-h-screen bg-[#0B0B0F] px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
       <Helmet>
-        <title>Referral Dashboard | SH Web Studio</title>
+        <title>Referral Dashboard & Wallet | SH Web Studio</title>
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
 
@@ -208,7 +292,7 @@ export const UserDashboardPage: React.FC = () => {
               <h1 className="text-xl sm:text-2xl font-bold text-white">{user?.name}</h1>
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20">
                 <Sparkles className="w-3 h-3" />
-                <span>10% Referral Partner</span>
+                <span>10% Partner Wallet</span>
               </span>
             </div>
             <p className="text-xs text-neutral-400 mt-1">
@@ -221,7 +305,7 @@ export const UserDashboardPage: React.FC = () => {
           <button
             onClick={fetchDashboardData}
             disabled={loading}
-            className="p-2.5 rounded-xl bg-[#17181F] hover:bg-[#20222B] border border-[#262833] text-neutral-300 hover:text-white text-xs font-medium transition-colors"
+            className="p-2.5 rounded-xl bg-[#17181F] hover:bg-[#20222B] border border-[#262833] text-neutral-300 hover:text-white text-xs font-medium transition-colors cursor-pointer"
             title="Refresh Data"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -237,7 +321,52 @@ export const UserDashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Referral Link Box (Primary Hero Action) */}
+      {/* Digital Wallet & Self-Withdrawal Card (Hero Action) */}
+      <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-emerald-950/40 via-[#101917] to-blue-950/40 border border-emerald-500/30 shadow-2xl relative overflow-hidden">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-2 max-w-xl">
+            <span className="text-[11px] font-mono uppercase tracking-widest text-emerald-400 font-semibold flex items-center gap-1.5">
+              <Wallet className="w-4 h-4" />
+              <span>Digital Commission Wallet</span>
+            </span>
+            <div className="flex items-baseline gap-3">
+              <span className="text-3xl sm:text-5xl font-extrabold text-white font-mono tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-200">
+                ${currentAvailableBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              <span className="text-xs sm:text-sm text-neutral-400 font-mono">Available Balance</span>
+            </div>
+            <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed">
+              Aapka kamaya hua 10% commission yahan save rehta hai. Aap kisi bhi waqt direct apne **JazzCash, Easypaisa, ya Bank Account** mein khud withdraw kar sakte hain.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setWithdrawAmount(currentAvailableBalance > 0 ? String(currentAvailableBalance) : '');
+                setWithdrawModalOpen(true);
+              }}
+              disabled={currentAvailableBalance <= 0}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 disabled:opacity-40 disabled:hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-600/30 cursor-pointer"
+            >
+              <ArrowDownCircle className="w-5 h-5" />
+              <span>Withdraw Money (Raqam Nikalwayen)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl text-xs font-semibold text-neutral-300 bg-[#161922] hover:bg-[#1E2230] border border-[#2B3044] transition-all cursor-pointer"
+            >
+              <Share2 className="w-4 h-4 text-blue-400" />
+              <span>{copied ? 'Link Copied!' : 'Referral Link'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Referral Link Box */}
       <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-blue-950/40 via-indigo-950/30 to-blue-900/30 border border-blue-500/30 shadow-2xl relative overflow-hidden">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2 max-w-xl">
@@ -264,7 +393,7 @@ export const UserDashboardPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleCopyLink}
-                className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                   copied
                     ? 'bg-emerald-500 text-white'
                     : 'bg-blue-600 hover:bg-blue-500 text-white'
@@ -331,24 +460,24 @@ export const UserDashboardPage: React.FC = () => {
 
         <div className="p-4 sm:p-5 rounded-2xl bg-[#121318] border border-[#20222B]">
           <div className="flex items-center justify-between text-neutral-400 text-xs mb-2">
-            <span>Total Commission</span>
+            <span>Total Earned</span>
             <DollarSign className="w-4 h-4 text-indigo-400" />
           </div>
           <div className="text-2xl sm:text-3xl font-bold text-white font-mono text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300">
             ${stats.totalEarnedCommission.toLocaleString()}
           </div>
-          <div className="text-[10px] text-neutral-400 mt-1">10% earned revenue</div>
+          <div className="text-[10px] text-neutral-400 mt-1">All-time 10%</div>
         </div>
 
         <div className="p-4 sm:p-5 rounded-2xl bg-[#121318] border border-[#20222B]">
           <div className="flex items-center justify-between text-neutral-400 text-xs mb-2">
-            <span>Pending Review</span>
-            <Clock className="w-4 h-4 text-amber-400" />
+            <span>Ready / Available</span>
+            <Wallet className="w-4 h-4 text-emerald-400" />
           </div>
-          <div className="text-2xl sm:text-3xl font-bold text-amber-400 font-mono">
-            ${stats.pendingCommission.toLocaleString()}
+          <div className="text-2xl sm:text-3xl font-bold text-emerald-400 font-mono">
+            ${currentAvailableBalance.toLocaleString()}
           </div>
-          <div className="text-[10px] text-neutral-400 mt-1">Awaiting client clear</div>
+          <div className="text-[10px] text-emerald-400 mt-1">Ready to withdraw</div>
         </div>
 
         <div className="p-4 sm:p-5 rounded-2xl bg-[#121318] border border-[#20222B]">
@@ -359,18 +488,18 @@ export const UserDashboardPage: React.FC = () => {
           <div className="text-2xl sm:text-3xl font-bold text-blue-400 font-mono">
             ${stats.approvedCommission.toLocaleString()}
           </div>
-          <div className="text-[10px] text-neutral-400 mt-1">Ready for payout</div>
+          <div className="text-[10px] text-neutral-400 mt-1">Verified deals</div>
         </div>
 
         <div className="p-4 sm:p-5 rounded-2xl bg-[#121318] border border-[#20222B]">
           <div className="flex items-center justify-between text-neutral-400 text-xs mb-2">
-            <span>Paid Out</span>
-            <CreditCard className="w-4 h-4 text-emerald-400" />
+            <span>Withdrawn / Paid</span>
+            <CreditCard className="w-4 h-4 text-teal-400" />
           </div>
-          <div className="text-2xl sm:text-3xl font-bold text-emerald-400 font-mono">
+          <div className="text-2xl sm:text-3xl font-bold text-teal-400 font-mono">
             ${stats.paidCommission.toLocaleString()}
           </div>
-          <div className="text-[10px] text-neutral-400 mt-1">Direct deposited</div>
+          <div className="text-[10px] text-neutral-400 mt-1">Transferred funds</div>
         </div>
       </div>
 
@@ -451,44 +580,52 @@ export const UserDashboardPage: React.FC = () => {
                             {new Date(item.registeredAt).toLocaleDateString()}
                           </td>
                           <td className="py-3.5 px-4">
-                            <span
-                              className={`inline-block px-2 py-0.5 rounded text-[10px] font-mono uppercase font-semibold ${
-                                isClient
-                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                  : 'bg-neutral-800 text-neutral-300 border border-neutral-700'
-                              }`}
-                            >
-                              {item.status.replace(/_/g, ' ')}
-                            </span>
+                            {isClient ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                <CheckCircle2 className="w-3 h-3" />
+                                <span>Paying Client</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-neutral-800 text-neutral-400">
+                                <User className="w-3 h-3" />
+                                <span>Registered Lead</span>
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 font-mono font-medium text-neutral-300">
+                            {item.qualifyingPayment > 0 ? `$${item.qualifyingPayment.toLocaleString()}` : '—'}
                           </td>
                           <td className="py-3.5 px-4 font-mono font-bold text-white">
-                            {item.qualifyingPayment > 0 ? `$${item.qualifyingPayment}` : '—'}
-                          </td>
-                          <td className="py-3.5 px-4 font-mono font-extrabold text-blue-400">
-                            {item.commission > 0 ? `$${item.commission}` : '—'}
+                            {item.commission > 0 ? (
+                              <span className="text-emerald-400">${item.commission.toLocaleString()}</span>
+                            ) : (
+                              '—'
+                            )}
                           </td>
                           <td className="py-3.5 px-4">
-                            {item.commissionsCount > 0 ? (
+                            {item.commissions && item.commissions.length > 0 ? (
                               <div className="space-y-1">
-                                {item.commissions.map((c) => (
+                                {item.commissions.map((comm) => (
                                   <span
-                                    key={c.id}
-                                    className={`inline-block px-2 py-0.5 rounded text-[10px] font-mono uppercase font-semibold ${
-                                      c.status === 'paid'
-                                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                                        : c.status === 'approved'
-                                        ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                                        : c.status === 'rejected'
-                                        ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                                        : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                    key={comm.id}
+                                    className={`inline-block px-2 py-0.5 rounded text-[10px] font-mono uppercase font-semibold border ${
+                                      comm.status === 'paid'
+                                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                                        : comm.status === 'approved'
+                                        ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
+                                        : comm.status === 'rejected'
+                                        ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                                        : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
                                     }`}
                                   >
-                                    {c.status}
+                                    {comm.status === 'paid' ? 'PAID / WITHDRAWN' : comm.status.toUpperCase()}
                                   </span>
                                 ))}
                               </div>
                             ) : (
-                              <span className="text-neutral-400 text-[11px] font-mono">Pending</span>
+                              <span className="text-[11px] text-neutral-400 italic">
+                                {isClient ? 'Processing Deal' : 'Pending Order'}
+                              </span>
                             )}
                           </td>
                         </tr>
@@ -501,23 +638,25 @@ export const UserDashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right 1 Col: Payout Details & Profile Settings */}
+        {/* Right 1 Col: Payout Details & Settings */}
         <div className="space-y-6">
           {/* Payout Details Card */}
           <div className="p-6 rounded-3xl bg-[#121318] border border-[#20222B] shadow-xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#1C1D24]">
-              <div className="flex items-center gap-2">
-                <CreditCard className="w-4 h-4 text-blue-400" />
-                <h4 className="text-sm font-bold text-white">Payout Method</h4>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditingPayment(!editingPayment)}
-                className="text-xs font-semibold text-blue-400 hover:text-blue-300 inline-flex items-center gap-1 cursor-pointer"
-              >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>{editingPayment ? 'Cancel' : 'Edit'}</span>
-              </button>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <CreditCard className="w-4 h-4 text-emerald-400" />
+                <span>Saved Withdrawal Details</span>
+              </h3>
+              {!editingPayment && (
+                <button
+                  type="button"
+                  onClick={() => setEditingPayment(true)}
+                  className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 font-semibold cursor-pointer"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Edit</span>
+                </button>
+              )}
             </div>
 
             {paymentMessage && (
@@ -529,9 +668,9 @@ export const UserDashboardPage: React.FC = () => {
                 }`}
               >
                 {paymentMessage.type === 'success' ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
                 ) : (
-                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                  <AlertCircle className="w-4 h-4 shrink-0" />
                 )}
                 <span>{paymentMessage.text}</span>
               </div>
@@ -540,155 +679,123 @@ export const UserDashboardPage: React.FC = () => {
             {editingPayment ? (
               <form onSubmit={handleSavePaymentDetails} className="space-y-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-neutral-300 mb-1 uppercase">
-                    Payout Method
+                  <label className="block text-[11px] text-neutral-400 mb-1 font-medium">
+                    Payment Method
                   </label>
                   <select
                     value={paymentForm.method}
-                    onChange={(e) =>
-                      setPaymentForm({ ...paymentForm, method: e.target.value as any })
-                    }
-                    className="w-full px-3 py-2 bg-[#0B0B0F] border border-[#262833] rounded-xl text-xs text-white outline-none"
+                    onChange={(e) => setPaymentForm({ ...paymentForm, method: e.target.value as any })}
+                    className="w-full px-3 py-2 rounded-xl bg-[#17181F] border border-[#2B2E3D] text-xs text-white focus:outline-none focus:border-blue-500"
                   >
-                    <option value="Bank Transfer">Bank Transfer (Pakistan & International)</option>
-                    <option value="Easypaisa">Easypaisa</option>
                     <option value="JazzCash">JazzCash</option>
+                    <option value="Easypaisa">Easypaisa</option>
+                    <option value="Bank Transfer">Bank Transfer (All Pakistani & Global Banks)</option>
+                    <option value="SadaPay">SadaPay / NayaPay</option>
                     <option value="PayPal">PayPal</option>
-                    <option value="Other">Other Payout Channel</option>
+                    <option value="Other">Crypto / USDT / Other</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-neutral-300 mb-1 uppercase">
-                    Account Holder Name
+                  <label className="block text-[11px] text-neutral-400 mb-1 font-medium">
+                    Account Holder Name / Title
                   </label>
                   <input
                     type="text"
                     required
                     value={paymentForm.accountHolderName}
-                    onChange={(e) =>
-                      setPaymentForm({ ...paymentForm, accountHolderName: e.target.value })
-                    }
-                    placeholder="e.g. Muhammad Humayoon"
-                    className="w-full px-3 py-2 bg-[#0B0B0F] border border-[#262833] rounded-xl text-xs text-white outline-none"
+                    onChange={(e) => setPaymentForm({ ...paymentForm, accountHolderName: e.target.value })}
+                    placeholder="e.g. Muhammad Ali"
+                    className="w-full px-3 py-2 rounded-xl bg-[#17181F] border border-[#2B2E3D] text-xs text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-neutral-300 mb-1 uppercase">
-                    Bank / Service Name
-                  </label>
-                  <input
-                    type="text"
-                    value={paymentForm.bankName}
-                    onChange={(e) =>
-                      setPaymentForm({ ...paymentForm, bankName: e.target.value })
-                    }
-                    placeholder="e.g. Meezan Bank / HBL / Easypaisa"
-                    className="w-full px-3 py-2 bg-[#0B0B0F] border border-[#262833] rounded-xl text-xs text-white outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-neutral-300 mb-1 uppercase">
-                    Account Number / IBAN / Wallet Number
+                  <label className="block text-[11px] text-neutral-400 mb-1 font-medium">
+                    Account / Mobile / Wallet Number
                   </label>
                   <input
                     type="text"
                     required
                     value={paymentForm.accountNumber}
-                    onChange={(e) =>
-                      setPaymentForm({ ...paymentForm, accountNumber: e.target.value })
-                    }
-                    placeholder="e.g. PK00MEZN0000000000000000"
-                    className="w-full px-3 py-2 bg-[#0B0B0F] border border-[#262833] rounded-xl text-xs text-white outline-none font-mono"
+                    onChange={(e) => setPaymentForm({ ...paymentForm, accountNumber: e.target.value })}
+                    placeholder="03001234567 or IBAN"
+                    className="w-full px-3 py-2 rounded-xl bg-[#17181F] border border-[#2B2E3D] text-xs text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-neutral-300 mb-1 uppercase">
-                    Additional Payout Notes
+                  <label className="block text-[11px] text-neutral-400 mb-1 font-medium">
+                    Bank Name (if applicable)
                   </label>
                   <input
                     type="text"
-                    value={paymentForm.notes}
-                    onChange={(e) =>
-                      setPaymentForm({ ...paymentForm, notes: e.target.value })
-                    }
-                    placeholder="Optional SWIFT or Branch details"
-                    className="w-full px-3 py-2 bg-[#0B0B0F] border border-[#262833] rounded-xl text-xs text-white outline-none"
+                    value={paymentForm.bankName}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, bankName: e.target.value })}
+                    placeholder="e.g. Meezan Bank, HBL, SadaPay"
+                    className="w-full px-3 py-2 rounded-xl bg-[#17181F] border border-[#2B2E3D] text-xs text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={savingPayment}
-                  className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  {savingPayment ? <Spinner size="sm" /> : <Save className="w-3.5 h-3.5" />}
-                  <span>Save Payout Details</span>
-                </button>
+                <div className="flex items-center gap-2 pt-2">
+                  <button
+                    type="submit"
+                    disabled={savingPayment}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 transition-colors cursor-pointer"
+                  >
+                    {savingPayment ? <Spinner size="sm" /> : <Save className="w-3.5 h-3.5" />}
+                    <span>Save Details</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingPayment(false)}
+                    className="px-3 py-2 rounded-xl text-xs text-neutral-400 hover:text-white bg-white/5 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </form>
             ) : (
-              <div className="space-y-3 text-xs">
-                {user?.paymentDetails?.accountNumber ? (
-                  <div className="space-y-2">
-                    <div className="flex justify-between py-1 border-b border-[#1A1B22]">
-                      <span className="text-neutral-400">Method:</span>
-                      <strong className="text-white">{user.paymentDetails.method || 'Bank Transfer'}</strong>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-[#1A1B22]">
-                      <span className="text-neutral-400">Account Name:</span>
-                      <strong className="text-white">{user.paymentDetails.accountHolderName}</strong>
-                    </div>
-                    {user.paymentDetails.bankName && (
-                      <div className="flex justify-between py-1 border-b border-[#1A1B22]">
-                        <span className="text-neutral-400">Bank / Provider:</span>
-                        <span className="text-white">{user.paymentDetails.bankName}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between py-1 border-b border-[#1A1B22]">
-                      <span className="text-neutral-400">Account / IBAN:</span>
-                      <span className="font-mono text-neutral-300">
-                        {user.paymentDetails.accountNumber.length > 8
-                          ? `•••• •••• ${user.paymentDetails.accountNumber.slice(-4)}`
-                          : user.paymentDetails.accountNumber}
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-4 rounded-2xl bg-[#0B0B0F] border border-dashed border-[#262833] text-center space-y-2">
-                    <p className="text-neutral-400 text-[11px]">
-                      No payout method added yet. Add your bank or mobile wallet details to receive commission payouts.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setEditingPayment(true)}
-                      className="px-3 py-1.5 rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 text-xs font-semibold"
-                    >
-                      + Add Payout Method
-                    </button>
+              <div className="space-y-2.5 text-xs text-neutral-300 bg-[#0E0F14] p-3.5 rounded-2xl border border-[#1E202B]">
+                <div className="flex justify-between py-1 border-b border-[#1A1B24]">
+                  <span className="text-neutral-400">Method:</span>
+                  <span className="font-semibold text-white">{paymentForm.method || 'Not Configured'}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-[#1A1B24]">
+                  <span className="text-neutral-400">Account Title:</span>
+                  <span className="font-semibold text-white">{paymentForm.accountHolderName || '—'}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-[#1A1B24]">
+                  <span className="text-neutral-400">Account / Phone:</span>
+                  <span className="font-mono text-emerald-400">{paymentForm.accountNumber || '—'}</span>
+                </div>
+                {paymentForm.bankName && (
+                  <div className="flex justify-between py-1">
+                    <span className="text-neutral-400">Bank Name:</span>
+                    <span className="text-white">{paymentForm.bankName}</span>
                   </div>
                 )}
               </div>
             )}
           </div>
 
-          {/* Profile Information Card */}
+          {/* Profile Settings Card */}
           <div className="p-6 rounded-3xl bg-[#121318] border border-[#20222B] shadow-xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#1C1D24]">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 <User className="w-4 h-4 text-blue-400" />
-                <h4 className="text-sm font-bold text-white">Profile Details</h4>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditingProfile(!editingProfile)}
-                className="text-xs font-semibold text-blue-400 hover:text-blue-300 inline-flex items-center gap-1 cursor-pointer"
-              >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>{editingProfile ? 'Cancel' : 'Edit'}</span>
-              </button>
+                <span>Account Profile</span>
+              </h3>
+              {!editingProfile && (
+                <button
+                  type="button"
+                  onClick={() => setEditingProfile(true)}
+                  className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 font-semibold cursor-pointer"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Edit</span>
+                </button>
+              )}
             </div>
 
             {profileMessage && (
@@ -699,7 +806,11 @@ export const UserDashboardPage: React.FC = () => {
                     : 'bg-rose-500/10 text-rose-300 border border-rose-500/20'
                 }`}
               >
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                {profileMessage.type === 'success' ? (
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                )}
                 <span>{profileMessage.text}</span>
               </div>
             )}
@@ -707,76 +818,281 @@ export const UserDashboardPage: React.FC = () => {
             {editingProfile ? (
               <form onSubmit={handleSaveProfile} className="space-y-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-neutral-300 mb-1 uppercase">
-                    Full Name
-                  </label>
+                  <label className="block text-[11px] text-neutral-400 mb-1 font-medium">Full Name</label>
                   <input
                     type="text"
                     required
                     value={profileForm.name}
                     onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#0B0B0F] border border-[#262833] rounded-xl text-xs text-white outline-none"
+                    className="w-full px-3 py-2 rounded-xl bg-[#17181F] border border-[#2B2E3D] text-xs text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
-
                 <div>
-                  <label className="block text-[11px] font-semibold text-neutral-300 mb-1 uppercase">
-                    Phone / WhatsApp
-                  </label>
+                  <label className="block text-[11px] text-neutral-400 mb-1 font-medium">Phone Number</label>
                   <input
-                    type="tel"
+                    type="text"
                     value={profileForm.phone}
                     onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                    placeholder="+92 300 0000000"
-                    className="w-full px-3 py-2 bg-[#0B0B0F] border border-[#262833] rounded-xl text-xs text-white outline-none"
+                    placeholder="+92 300 1234567"
+                    className="w-full px-3 py-2 rounded-xl bg-[#17181F] border border-[#2B2E3D] text-xs text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
-
                 <div>
-                  <label className="block text-[11px] font-semibold text-neutral-300 mb-1 uppercase">
-                    Company / Organization
-                  </label>
+                  <label className="block text-[11px] text-neutral-400 mb-1 font-medium">Company / Agency</label>
                   <input
                     type="text"
                     value={profileForm.company}
                     onChange={(e) => setProfileForm({ ...profileForm, company: e.target.value })}
                     placeholder="Optional"
-                    className="w-full px-3 py-2 bg-[#0B0B0F] border border-[#262833] rounded-xl text-xs text-white outline-none"
+                    className="w-full px-3 py-2 rounded-xl bg-[#17181F] border border-[#2B2E3D] text-xs text-white focus:outline-none focus:border-blue-500"
                   />
                 </div>
-
-                <button
-                  type="submit"
-                  disabled={savingProfile}
-                  className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  {savingProfile ? <Spinner size="sm" /> : <Save className="w-3.5 h-3.5" />}
-                  <span>Save Profile</span>
-                </button>
+                <div className="flex items-center gap-2 pt-2">
+                  <button
+                    type="submit"
+                    disabled={savingProfile}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 transition-colors cursor-pointer"
+                  >
+                    {savingProfile ? <Spinner size="sm" /> : <Save className="w-3.5 h-3.5" />}
+                    <span>Save Profile</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingProfile(false)}
+                    className="px-3 py-2 rounded-xl text-xs text-neutral-400 hover:text-white bg-white/5 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </form>
             ) : (
-              <div className="space-y-2 text-xs">
-                <div className="flex justify-between py-1 border-b border-[#1A1B22]">
+              <div className="space-y-2.5 text-xs text-neutral-300 bg-[#0E0F14] p-3.5 rounded-2xl border border-[#1E202B]">
+                <div className="flex justify-between py-1 border-b border-[#1A1B24]">
+                  <span className="text-neutral-400">Name:</span>
+                  <span className="font-semibold text-white">{user?.name}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-[#1A1B24]">
                   <span className="text-neutral-400">Email:</span>
                   <span className="font-mono text-white">{user?.email}</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-[#1A1B22]">
+                <div className="flex justify-between py-1 border-b border-[#1A1B24]">
                   <span className="text-neutral-400">Phone:</span>
                   <span className="text-white">{user?.phone || 'Not set'}</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-[#1A1B22]">
+                <div className="flex justify-between py-1">
                   <span className="text-neutral-400">Company:</span>
-                  <span className="text-white">{user?.company || 'None'}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-[#1A1B22]">
-                  <span className="text-neutral-400">Referral Code:</span>
-                  <span className="font-mono text-blue-400 font-bold">{user?.referralCode}</span>
+                  <span className="text-white">{user?.company || 'Independent'}</span>
                 </div>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Self-Withdrawal Modal */}
+      {withdrawModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-lg bg-[#12131C] border border-[#2B3045] rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-[#202436] pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <ArrowDownCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Direct Self-Withdrawal</h3>
+                  <p className="text-xs text-neutral-400">Withdraw your earned 10% commission instantly</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setWithdrawModalOpen(false)}
+                className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleExecuteWithdrawal} className="space-y-4">
+              <div className="p-4 rounded-2xl bg-emerald-950/30 border border-emerald-500/20 flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-emerald-300 font-medium">Available Wallet Balance:</span>
+                  <div className="text-2xl font-bold font-mono text-emerald-400">
+                    ${currentAvailableBalance.toFixed(2)}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setWithdrawAmount(String(currentAvailableBalance))}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Withdraw All
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-xs text-neutral-300 font-medium mb-1.5">
+                  Amount to Withdraw (USD)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 font-bold">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="1"
+                    max={currentAvailableBalance}
+                    required
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    placeholder="Enter amount (e.g. 50)"
+                    className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-[#171924] border border-[#2B3045] text-sm text-white font-mono focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs text-neutral-300 font-medium mb-1.5">
+                  Withdrawal Method
+                </label>
+                <select
+                  value={withdrawMethod}
+                  onChange={(e) => setWithdrawMethod(e.target.value as any)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#171924] border border-[#2B3045] text-xs text-white focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="JazzCash">JazzCash (Instant Mobile Payout)</option>
+                  <option value="Easypaisa">Easypaisa (Instant Mobile Payout)</option>
+                  <option value="SadaPay">SadaPay / NayaPay</option>
+                  <option value="Bank Transfer">Bank Transfer (Direct Account)</option>
+                  <option value="PayPal">PayPal</option>
+                  <option value="Crypto">Crypto (USDT / TRC20)</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-neutral-300 font-medium mb-1.5">
+                    Account / Mobile Number
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={withdrawAccount}
+                    onChange={(e) => setWithdrawAccount(e.target.value)}
+                    placeholder="03001234567 or IBAN"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#171924] border border-[#2B3045] text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-neutral-300 font-medium mb-1.5">
+                    Account Holder Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={withdrawAccountTitle}
+                    onChange={(e) => setWithdrawAccountTitle(e.target.value)}
+                    placeholder="Full Account Title"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#171924] border border-[#2B3045] text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              {withdrawMethod === 'Bank Transfer' && (
+                <div>
+                  <label className="block text-xs text-neutral-300 font-medium mb-1.5">
+                    Bank Name
+                  </label>
+                  <input
+                    type="text"
+                    value={withdrawBankName}
+                    onChange={(e) => setWithdrawBankName(e.target.value)}
+                    placeholder="Meezan Bank, HBL, Bank Alfalah, etc."
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#171924] border border-[#2B3045] text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs text-neutral-300 font-medium mb-1.5">
+                  Optional Note
+                </label>
+                <input
+                  type="text"
+                  value={withdrawNotes}
+                  onChange={(e) => setWithdrawNotes(e.target.value)}
+                  placeholder="e.g. Urgently needed for personal wallet"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#171924] border border-[#2B3045] text-xs text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="pt-3 flex items-center justify-end gap-3 border-t border-[#202436]">
+                <button
+                  type="button"
+                  onClick={() => setWithdrawModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl text-xs font-semibold text-neutral-300 hover:text-white bg-white/5 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingWithdraw || currentAvailableBalance <= 0}
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 transition-all shadow-lg shadow-emerald-600/30 cursor-pointer disabled:opacity-50"
+                >
+                  {submittingWithdraw ? <Spinner size="sm" /> : <ArrowDownCircle className="w-4 h-4" />}
+                  <span>Confirm & Withdraw Now</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Withdrawal Success Receipt Modal */}
+      {withdrawSuccessReceipt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-[#121420] border border-emerald-500/40 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 text-center animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 rounded-3xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20 animate-bounce">
+              <CheckCircle2 className="w-8 h-8" />
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="text-xl font-extrabold text-white">Withdrawal Processed!</h3>
+              <p className="text-xs text-emerald-300">Aapki raqam successfully process ho chuki hai.</p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-[#0B0D16] border border-[#22273A] text-left text-xs space-y-2.5 font-mono">
+              <div className="flex justify-between border-b border-[#1C2030] pb-2">
+                <span className="text-neutral-400">Transaction ID:</span>
+                <span className="font-bold text-emerald-400">{withdrawSuccessReceipt.transactionId}</span>
+              </div>
+              <div className="flex justify-between border-b border-[#1C2030] pb-2">
+                <span className="text-neutral-400">Amount:</span>
+                <span className="font-bold text-white">${withdrawSuccessReceipt.amount.toFixed(2)} USD</span>
+              </div>
+              <div className="flex justify-between border-b border-[#1C2030] pb-2">
+                <span className="text-neutral-400">Method:</span>
+                <span className="text-white">{withdrawSuccessReceipt.payoutMethod}</span>
+              </div>
+              <div className="flex justify-between border-b border-[#1C2030] pb-2">
+                <span className="text-neutral-400">Destination:</span>
+                <span className="text-neutral-200 truncate max-w-[180px]">{withdrawSuccessReceipt.payoutDetails}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-neutral-400">Status:</span>
+                <span className="font-bold text-emerald-400 uppercase">COMPLETED ✅</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setWithdrawSuccessReceipt(null)}
+              className="w-full py-3 rounded-2xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 transition-all shadow-md shadow-emerald-600/30 cursor-pointer"
+            >
+              Done & View Updated Wallet
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

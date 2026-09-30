@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Project } from '../../types';
 import { api } from '../../services/api';
+import { SEO } from '../../components/common/SEO';
 import { SectionHeading } from '../../components/common/SectionHeading';
 import { CardSkeleton } from '../../components/common/Loader';
 import { Link } from 'react-router-dom';
@@ -8,10 +9,6 @@ import { ExternalLink, Github, ArrowRight, Laptop } from 'lucide-react';
 import { FooterCta } from '../../components/public/FooterCta';
 
 export const ProjectsPage: React.FC = () => {
-  useEffect(() => {
-    document.title = 'Our Work | SH Web Studio Portfolio';
-  }, []);
-
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -43,7 +40,11 @@ export const ProjectsPage: React.FC = () => {
       : projects.filter((p) => p.category === selectedCategory);
 
   return (
-    <div className="pt-28 pb-16">
+    <div className="pt-12 pb-16">
+      <SEO 
+        title="Our Portfolio | High-Impact Case Studies"
+        description="Explore our portfolio of high-performance web applications, e-commerce systems, and custom digital solutions built by SH Web Studio."
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeading
           kicker="Portfolio & Case Studies"

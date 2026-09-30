@@ -1,6 +1,7 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useSite } from '../../context/SiteContext';
+import { getCanonicalUrl } from '../../utils/seo';
 
 interface SEOProps {
   title?: string;
@@ -25,13 +26,13 @@ export const SEO: React.FC<SEOProps> = ({
 }) => {
   const { seo } = useSite();
 
-  const siteTitle = title || seo.metaTitle || 'SH Web Studio';
-  const siteDescription = description || seo.metaDescription || 'Professional Web Development Studio';
-  const siteKeywords = keywords || seo.keywords || 'web development, react, nodejs';
+  const siteTitle = title || seo.metaTitle || 'SH Web Studio | High-Performance Web Development';
+  const siteDescription = description || seo.metaDescription || 'SH Web Studio is a premier digital agency specializing in modern React ecosystems, full-stack Node.js applications, and custom business solutions.';
+  const siteKeywords = keywords || seo.keywords || 'web development, react, nodejs, custom software, digital studio, pakistan web development';
   const siteOgTitle = ogTitle || siteTitle;
   const siteOgDescription = ogDescription || siteDescription;
-  const siteOgImage = ogImage || seo.ogImage || '/og-image.jpg';
-  const siteCanonical = canonical || window.location.href;
+  const siteOgImage = ogImage || seo.ogImage || 'https://shwebstudio.up.railway.app/og-image.jpg';
+  const siteCanonical = canonical || getCanonicalUrl();
 
   return (
     <Helmet>

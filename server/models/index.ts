@@ -18,6 +18,7 @@ import {
   PaymentModel,
   CommissionModel,
   ReferralSettingsModel,
+  WithdrawalRequestModel,
   IAdmin,
   ISiteSettings,
   IService,
@@ -33,6 +34,7 @@ import {
   IPayment,
   ICommission,
   IReferralSettings,
+  IWithdrawalRequest,
 } from './schemas.js';
 
 const DATA_DIR = path.resolve(process.cwd(), 'server', 'data');
@@ -54,6 +56,7 @@ interface LocalDBData {
   payments: any[];
   commissions: any[];
   referralSettings: any[];
+  withdrawalRequests: any[];
 }
 
 const defaultDBData: LocalDBData = {
@@ -72,6 +75,7 @@ const defaultDBData: LocalDBData = {
   payments: [],
   commissions: [],
   referralSettings: [],
+  withdrawalRequests: [],
 };
 
 // Ensure data file exists
@@ -398,4 +402,6 @@ export const Referral = createModelWrapper<IReferral>('referrals', ReferralModel
 export const Payment = createModelWrapper<IPayment>('payments', PaymentModel);
 export const Commission = createModelWrapper<ICommission>('commissions', CommissionModel);
 export const ReferralSettings = createModelWrapper<IReferralSettings>('referralSettings', ReferralSettingsModel);
+export const WithdrawalRequest = createModelWrapper<IWithdrawalRequest>('withdrawalRequests', WithdrawalRequestModel);
+
 

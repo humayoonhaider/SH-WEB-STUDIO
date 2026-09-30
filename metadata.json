@@ -1,6 +1,6 @@
 {
   "name": "SH Web Studio",
-  "description": "SH Web Studio - High-performance web development studio specializing in modern React ecosystems, full-stack Node.js applications, and custom digital business solutions.",
+  "description": "SH Web Studio is a premier digital agency specializing in modern React ecosystems, full-stack Node.js applications, and custom business solutions.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

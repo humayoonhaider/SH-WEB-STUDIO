@@ -484,7 +484,26 @@ export const api = {
       ),
     getPublicSettings: () => request<ReferralSettingsData>('/api/referrals/public-settings'),
     getMyReferrals: () => request<UserReferralItem[]>('/api/referrals/me'),
-    getMyStats: () => request<UserReferralStats>('/api/referrals/my-stats'),
+    getMyStats: () => request<UserReferralStats & { availableBalance?: number }>('/api/referrals/my-stats'),
+    requestWithdrawal: (data: {
+      amount: number;
+      payoutMethod?: string;
+      accountNumber?: string;
+      accountHolderName?: string;
+      bankName?: string;
+      notes?: string;
+    }) =>
+      request<{
+        transactionId: string;
+        amount: number;
+        payoutMethod: string;
+        payoutDetails: string;
+        status: string;
+        processedAt: string;
+      }>('/api/referrals/withdraw', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
   },
 
   // Admin Referral Management

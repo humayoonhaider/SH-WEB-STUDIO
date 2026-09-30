@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { User, Referral, Commission, Payment, ReferralSettings } from '../models/index.js';
+import { User, Referral, Commission, Payment, ReferralSettings, WithdrawalRequest } from '../models/index.js';
 import { AuthenticatedRequest } from '../middleware/auth.js';
 
 // Public endpoint to validate referral code on register page
@@ -193,6 +193,22 @@ export const getMyStats = async (req: AuthenticatedRequest, res: Response): Prom
       }
     });
 
+    // Get all pending / approved withdrawal requests for this user
+    const withdrawalRequests = await WithdrawalRequest.find({
+      user: userId,
+      status: { $in: ['pending', 'approved', 'paid'] },
+    });
+
+    const pendingWithdrawals = withdrawalRequests
+      .filter((w: any) => w.status === 'pending' || w.status === 'approved')
+      .reduce((sum: number, w: any) => sum + (Number(w.amount) || 0), 0);
+
+    const paidWithdrawals = withdrawalRequests
+      .filter((w: any) => w.status === 'paid')
+      .reduce((sum: number, w: any) => sum + (Number(w.amount) || 0), 0);
+
+    const availableBalance = Math.max(0, (approvedCommission + pendingCommission) - pendingWithdrawals);
+
     res.json({
       success: true,
       data: {
@@ -204,7 +220,9 @@ export const getMyStats = async (req: AuthenticatedRequest, res: Response): Prom
         totalEarnedCommission,
         pendingCommission,
         approvedCommission,
-        paidCommission,
+        paidCommission: Math.max(paidCommission, paidWithdrawals),
+        availableBalance,
+        pendingWithdrawals,
         currency: 'USD',
       },
     });
@@ -213,3 +231,137 @@ export const getMyStats = async (req: AuthenticatedRequest, res: Response): Prom
     res.status(500).json({ success: false, message: 'Failed to fetch referral statistics.' });
   }
 };
+
+// User Dashboard: Submit Withdrawal Request for Admin Approval
+export const createWithdrawalRequest = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const userId = String(req.user.id);
+    const { amount, payoutMethod, accountNumber, accountHolderName, bankName, notes } = req.body;
+
+    const withdrawAmount = Number(amount);
+    if (!withdrawAmount || withdrawAmount <= 0) {
+      res.status(400).json({ success: false, message: 'Please enter a valid withdrawal amount.' });
+      return;
+    }
+
+    if (!accountNumber || !accountHolderName) {
+      res.status(400).json({ success: false, message: 'Account number and account holder name are required.' });
+      return;
+    }
+
+    // Calculate user's currently available balance
+    const availableCommissions = await Commission.find({
+      referrer: userId,
+      status: { $in: ['approved', 'pending'] },
+    });
+
+    const totalUnpaidCommissions = availableCommissions.reduce(
+      (sum: number, c: any) => sum + (Number(c.commissionAmount) || 0),
+      0
+    );
+
+    const existingPendingRequests = await WithdrawalRequest.find({
+      user: userId,
+      status: { $in: ['pending', 'approved'] },
+    });
+
+    const totalPendingRequested = existingPendingRequests.reduce(
+      (sum: number, w: any) => sum + (Number(w.amount) || 0),
+      0
+    );
+
+    const availableBalance = totalUnpaidCommissions - totalPendingRequested;
+
+    if (withdrawAmount > availableBalance) {
+      res.status(400).json({
+        success: false,
+        message: `Requested amount ($${withdrawAmount}) exceeds your available balance ($${availableBalance.toFixed(2)}).`,
+      });
+      return;
+    }
+
+    const newRequest = await WithdrawalRequest.create({
+      user: userId,
+      userName: req.user.name || '',
+      userEmail: req.user.email || '',
+      amount: withdrawAmount,
+      currency: 'USD',
+      payoutMethod: payoutMethod || 'JazzCash',
+      accountNumber,
+      accountHolderName,
+      bankName: bankName || '',
+      notes: notes || '',
+      status: 'pending',
+      requestedAt: new Date(),
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Withdrawal request submitted successfully! Admin will review and process your payout.',
+      data: newRequest,
+    });
+  } catch (error: any) {
+    console.error('Error creating withdrawal request:', error);
+    res.status(500).json({ success: false, message: 'Failed to submit withdrawal request.' });
+  }
+};
+
+// User Dashboard: Get My Withdrawal Requests
+export const getMyWithdrawalRequests = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const userId = String(req.user.id);
+    const requests = await WithdrawalRequest.find({ user: userId });
+    
+    // Sort descending by requestedAt
+    requests.sort((a: any, b: any) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
+
+    res.json({
+      success: true,
+      data: requests,
+    });
+  } catch (error: any) {
+    console.error('Error fetching withdrawal requests:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch withdrawal requests.' });
+  }
+};
+
+// User Dashboard: Cancel a Pending Withdrawal Request
+export const cancelWithdrawalRequest = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const userId = String(req.user.id);
+    const requestId = req.params.id;
+
+    const requestItem = await WithdrawalRequest.findOne({ _id: requestId, user: userId });
+    if (!requestItem) {
+      res.status(404).json({ success: false, message: 'Withdrawal request not found.' });
+      return;
+    }
+
+    if (requestItem.status !== 'pending') {
+      res.status(400).json({
+        success: false,
+        message: `Cannot cancel a request that is already ${requestItem.status}.`,
+      });
+      return;
+    }
+
+    await WithdrawalRequest.findByIdAndUpdate(requestId, {
+      status: 'rejected',
+      adminNote: 'Cancelled by user',
+      rejectedAt: new Date(),
+    });
+
+    res.json({
+      success: true,
+      message: 'Withdrawal request cancelled successfully.',
+    });
+  } catch (error: any) {
+    console.error('Error cancelling withdrawal request:', error);
+    res.status(500).json({ success: false, message: 'Failed to cancel withdrawal request.' });
+  }
+};
+
+// Backward-compatible direct self-withdrawal endpoint
+export const requestUserWithdrawal = createWithdrawalRequest;
+
+

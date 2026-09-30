@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
+import { SEO } from '../../components/common/SEO';
 import {
   DollarSign,
   Share2,
@@ -75,21 +75,11 @@ export const ReferralProgramPage: React.FC = () => {
   ];
 
   return (
-    <div className="pt-28 pb-20 overflow-hidden">
-      <Helmet>
-        <title>Refer & Earn 10% Commission | SH Web Studio</title>
-        <meta
-          name="description"
-          content="Join the SH Web Studio Referral Program. Refer businesses, founders, and companies for custom web development and earn 10% of qualifying client payments."
-        />
-        <link rel="canonical" href="https://shwebstudio.up.railway.app/referral-program" />
-        <meta property="og:title" content="Refer & Earn 10% Commission | SH Web Studio" />
-        <meta
-          property="og:description"
-          content="Earn 10% recurring client commissions by referring businesses to SH Web Studio."
-        />
-        <meta property="og:url" content="https://shwebstudio.up.railway.app/referral-program" />
-      </Helmet>
+    <div className="pt-12 pb-20 overflow-hidden">
+      <SEO 
+        title="Refer & Earn 10% Commission"
+        description="Join the SH Web Studio Referral Program. Refer businesses for custom web development and earn 10% of qualifying client payments."
+      />
 
       {/* Hero Section */}
       <section className="relative px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center">

@@ -102,7 +102,7 @@ export const ReviewsPage: React.FC = () => {
     : '5.0';
 
   return (
-    <div className="pt-28 pb-20 bg-[#0B0B0F] min-h-screen">
+    <div className="pt-12 pb-20 bg-[#0B0B0F] min-h-screen">
       {/* Header Banner */}
       <section className="relative overflow-hidden py-16 border-b border-[#1C1D24]">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-blue-600/10 rounded-full blur-[140px] pointer-events-none" />

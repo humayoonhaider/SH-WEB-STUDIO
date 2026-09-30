@@ -29,7 +29,7 @@ const app = express();
 app.set('trust proxy', true);
 
 // Ultra-fast Sitemap.xml (Serves instantly with static file priority and dynamic fallback)
-app.get('/sitemap.xml', async (_req, res) => {
+app.get('/sitemap.xml', async (req, res) => {
   try {
     // 1. Try serving pre-generated static XML directly (0ms response, zero db dependency)
     const candidates = [
@@ -49,7 +49,7 @@ app.get('/sitemap.xml', async (_req, res) => {
     }
 
     // 2. Dynamic Fallback
-    const baseUrl = (process.env.SITE_URL || 'https://shwebstudio.up.railway.app').replace(/\/$/, '');
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
     const today = new Date().toISOString().split('T')[0];
 
     let dynamicProjects: any[] = [];
@@ -169,7 +169,7 @@ app.get('/google:code.html', (req, res) => {
 });
 
 // Dynamic Robots.txt Route
-app.get('/robots.txt', (_req, res) => {
+app.get('/robots.txt', (req, res) => {
   const robotsPath = path.resolve(process.cwd(), 'public', 'robots.txt');
   if (fs.existsSync(robotsPath)) {
     const content = fs.readFileSync(robotsPath, 'utf-8');
@@ -178,12 +178,13 @@ app.get('/robots.txt', (_req, res) => {
     return res.status(200).send(content);
   }
 
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
   const defaultRobots = `User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /api
 
-Sitemap: https://shwebstudio.up.railway.app/sitemap.xml
+Sitemap: ${baseUrl}/sitemap.xml
 `;
   res.setHeader('Content-Type', 'text/plain; charset=utf-8');
   res.setHeader('Cache-Control', 'public, max-age=86400');

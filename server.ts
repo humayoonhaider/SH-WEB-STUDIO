@@ -25,14 +25,51 @@ async function startServer() {
       });
       app.use(vite.middlewares);
       console.log('🚀 Vite dev middleware attached');
+
+      // Fallback to serving index.html if Vite doesn't catch it
+      app.get('*', async (req, res, next) => {
+        try {
+          const url = req.originalUrl;
+          const fs = await import('fs');
+          const template = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8');
+          const html = await vite.transformIndexHtml(url, template);
+          res.status(200).set({ 'Content-Type': 'text/html' }).end(html);
+        } catch (e) {
+          next(e);
+        }
+      });
     } else {
       const distPath = path.resolve(__dirname, 'dist');
       const express = (await import('express')).default;
-      app.use(express.static(distPath));
-      app.get('*', (_req, res) => {
-        res.sendFile(path.resolve(distPath, 'index.html'));
-      });
-      console.log(`📦 Serving production build from ${distPath}`);
+      const fs = await import('fs');
+
+      if (fs.existsSync(distPath)) {
+        app.use(express.static(distPath, {
+          maxAge: '1d',
+          index: false // We handle index via catch-all
+        }));
+
+        app.get('*', (req, res) => {
+          const indexPath = path.resolve(distPath, 'index.html');
+          if (fs.existsSync(indexPath)) {
+            res.sendFile(indexPath);
+          } else {
+            console.error('❌ Production index.html missing at:', indexPath);
+            res.status(500).send('Production build is incomplete. Please run npm run build.');
+          }
+        });
+        console.log(`📦 Serving production build from ${distPath}`);
+      } else {
+        console.warn('⚠️ dist directory not found. Fallback to serving index.html from root.');
+        app.get('*', (_req, res) => {
+          const indexPath = path.resolve(__dirname, 'index.html');
+          if (fs.existsSync(indexPath)) {
+            res.sendFile(indexPath);
+          } else {
+            res.status(500).send('No build found and root index.html missing. Please run npm run build.');
+          }
+        });
+      }
     }
 
     // 2. Start Listening (Immediate responsiveness)
