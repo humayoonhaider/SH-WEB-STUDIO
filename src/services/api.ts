@@ -10,12 +10,21 @@ import {
   DashboardStats,
   Testimonial,
   PricingPlan,
+  PublicUser,
+  UserReferralItem,
+  UserReferralStats,
+  ReferralSettingsData,
+  AdminReferralItem,
+  AdminReferralStats,
+  UserPaymentDetails,
 } from '../types';
 import { defaultTestimonials } from '../data/defaultTestimonials';
+import { defaultProjects } from '../data/defaultProjects';
 
 // Force same-origin relative paths to avoid any cached/incorrect environment variables
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
-const TOKEN_KEY = 'sh_admin_auth_token_v3';
+const ADMIN_TOKEN_KEY = 'sh_admin_auth_token_v3';
+const USER_TOKEN_KEY = 'sh_user_auth_token_v1';
 
 // Clear any legacy insecure tokens from previous versions
 try {
@@ -24,23 +33,42 @@ try {
 } catch {}
 
 export const getToken = (): string | null => {
-  // Check sessionStorage first (per-tab/session), then localStorage (persistent)
-  return sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
+  return sessionStorage.getItem(ADMIN_TOKEN_KEY) || localStorage.getItem(ADMIN_TOKEN_KEY);
 };
 
 export const setToken = (token: string, remember = false): void => {
   if (remember) {
-    localStorage.setItem(TOKEN_KEY, token);
-    sessionStorage.removeItem(TOKEN_KEY);
+    localStorage.setItem(ADMIN_TOKEN_KEY, token);
+    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
   } else {
-    sessionStorage.setItem(TOKEN_KEY, token);
-    localStorage.removeItem(TOKEN_KEY);
+    sessionStorage.setItem(ADMIN_TOKEN_KEY, token);
+    localStorage.removeItem(ADMIN_TOKEN_KEY);
   }
 };
 
 export const removeToken = (): void => {
-  sessionStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+  localStorage.removeItem(ADMIN_TOKEN_KEY);
+};
+
+// Public User Token Management
+export const getUserToken = (): string | null => {
+  return sessionStorage.getItem(USER_TOKEN_KEY) || localStorage.getItem(USER_TOKEN_KEY);
+};
+
+export const setUserToken = (token: string, remember = true): void => {
+  if (remember) {
+    localStorage.setItem(USER_TOKEN_KEY, token);
+    sessionStorage.removeItem(USER_TOKEN_KEY);
+  } else {
+    sessionStorage.setItem(USER_TOKEN_KEY, token);
+    localStorage.removeItem(USER_TOKEN_KEY);
+  }
+};
+
+export const removeUserToken = (): void => {
+  sessionStorage.removeItem(USER_TOKEN_KEY);
+  localStorage.removeItem(USER_TOKEN_KEY);
 };
 
 interface ApiResponse<T> {
@@ -50,6 +78,7 @@ interface ApiResponse<T> {
   count?: number;
   token?: string;
   admin?: AdminUser;
+  user?: PublicUser;
 }
 
 async function request<T>(
@@ -61,15 +90,23 @@ async function request<T>(
   let cleanEndpoint = endpoint;
   let finalBaseUrl = BASE_URL;
   
-  // If BASE_URL ends with /api and endpoint starts with /api, remove one /api to avoid doubling
   if (finalBaseUrl.endsWith('/api') && endpoint.startsWith('/api')) {
-    cleanEndpoint = endpoint.substring(4); // Remove "/api"
+    cleanEndpoint = endpoint.substring(4);
   } else if (!finalBaseUrl && !endpoint.startsWith('/')) {
     cleanEndpoint = `/${endpoint}`;
   }
 
   const url = `${finalBaseUrl}${cleanEndpoint}`;
-  const token = getToken();
+
+  // Determine which token to send: user token for user routes, admin token for admin routes
+  const isUserSpecificRoute =
+    cleanEndpoint.startsWith('/api/user') ||
+    cleanEndpoint.startsWith('/api/referrals/me') ||
+    cleanEndpoint.startsWith('/api/referrals/my-stats');
+
+  const token = isUserSpecificRoute
+    ? getUserToken() || getToken()
+    : getToken() || getUserToken();
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -173,10 +210,65 @@ export const api = {
   },
 
   projects: {
-    getPublic: () => request<Project[]>('/api/projects'),
-    getAll: () => request<Project[]>('/api/projects/all'),
-    getBySlug: (slug: string) => request<Project>(`/api/projects/slug/${slug}`),
-    getById: (id: string) => request<Project>(`/api/projects/${id}`),
+    getPublic: async () => {
+      try {
+        const res = await request<Project[]>('/api/projects');
+        if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+          return res;
+        }
+        return { success: true, data: defaultProjects };
+      } catch {
+        return { success: true, data: defaultProjects };
+      }
+    },
+    getAll: async () => {
+      try {
+        const res = await request<Project[]>('/api/projects/all');
+        if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+          return res;
+        }
+        return { success: true, data: defaultProjects };
+      } catch {
+        return { success: true, data: defaultProjects };
+      }
+    },
+    getBySlug: async (slug: string) => {
+      try {
+        const res = await request<Project>(`/api/projects/slug/${encodeURIComponent(slug)}`);
+        if (res.success && res.data) {
+          return res;
+        }
+        throw new Error('Not found from server');
+      } catch {
+        const decoded = decodeURIComponent(slug).toLowerCase().trim();
+        const found = defaultProjects.find(
+          (p) =>
+            (p.slug && p.slug.toLowerCase() === decoded) ||
+            p._id === slug ||
+            p.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') === decoded ||
+            p.title.toLowerCase() === decoded
+        );
+        if (found) {
+          return { success: true, data: found };
+        }
+        return { success: false, message: 'Project not found.' };
+      }
+    },
+    getById: async (id: string) => {
+      try {
+        const res = await request<Project>(`/api/projects/${encodeURIComponent(id)}`);
+        if (res.success && res.data) {
+          return res;
+        }
+        throw new Error('Not found from server');
+      } catch {
+        const found = defaultProjects.find((p) => p._id === id || p.slug === id);
+        if (found) {
+          return { success: true, data: found };
+        }
+        return { success: false, message: 'Project not found.' };
+      }
+    },
     create: (data: Partial<Project>) =>
       request<Project>('/api/projects', {
         method: 'POST',
@@ -349,6 +441,125 @@ export const api = {
     delete: (id: string) =>
       request<void>(`/api/pricing/${id}`, {
         method: 'DELETE',
+      }),
+  },
+
+  // Public User Authentication & Profile
+  userAuth: {
+    register: (data: {
+      name: string;
+      email: string;
+      password: string;
+      phone?: string;
+      company?: string;
+      referralCode?: string;
+    }) =>
+      request<PublicUser>('/api/user/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    login: (credentials: { email: string; password: string }) =>
+      request<PublicUser>('/api/user/auth/login', {
+        method: 'POST',
+        body: JSON.stringify(credentials),
+      }),
+    getMe: () => request<PublicUser>('/api/user/auth/me'),
+    updateProfile: (data: { name?: string; phone?: string; company?: string }) =>
+      request<PublicUser>('/api/user/auth/profile', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    updatePaymentDetails: (data: UserPaymentDetails) =>
+      request<UserPaymentDetails>('/api/user/auth/payment-details', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+  },
+
+  // Referral System (Public & Authenticated User)
+  referrals: {
+    validate: (code: string) =>
+      request<{ code: string; referrerName: string; discountReward: string }>(
+        `/api/referrals/validate/${encodeURIComponent(code)}`
+      ),
+    getPublicSettings: () => request<ReferralSettingsData>('/api/referrals/public-settings'),
+    getMyReferrals: () => request<UserReferralItem[]>('/api/referrals/me'),
+    getMyStats: () => request<UserReferralStats & { availableBalance?: number }>('/api/referrals/my-stats'),
+    requestWithdrawal: (data: {
+      amount: number;
+      payoutMethod?: string;
+      accountNumber?: string;
+      accountHolderName?: string;
+      bankName?: string;
+      notes?: string;
+    }) =>
+      request<{
+        transactionId: string;
+        amount: number;
+        payoutMethod: string;
+        payoutDetails: string;
+        status: string;
+        processedAt: string;
+      }>('/api/referrals/withdraw', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+  },
+
+  // Admin Referral Management
+  adminReferrals: {
+    getStats: () => request<AdminReferralStats>('/api/admin/referrals/stats'),
+    getAll: (params?: { status?: string; search?: string }) => {
+      const query = new URLSearchParams();
+      if (params?.status && params.status !== 'all') query.set('status', params.status);
+      if (params?.search) query.set('search', params.search);
+      const qs = query.toString() ? `?${query.toString()}` : '';
+      return request<AdminReferralItem[]>(`/api/admin/referrals${qs}`);
+    },
+    getDetail: (id: string) => request<any>(`/api/admin/referrals/${id}`),
+    updateStatus: (id: string, status: string, notes?: string) =>
+      request<any>(`/api/admin/referrals/${id}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ status, notes }),
+      }),
+    recordPayment: (data: {
+      referralId: string;
+      amount: number;
+      currency?: string;
+      projectTitle?: string;
+      paymentReference?: string;
+      notes?: string;
+    }) =>
+      request<any>('/api/admin/referrals/payments', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    updateCommissionStatus: (
+      id: string,
+      data: {
+        status: 'pending' | 'approved' | 'paid' | 'rejected';
+        payoutMethod?: string;
+        payoutReference?: string;
+        adminNote?: string;
+      }
+    ) =>
+      request<any>(`/api/admin/referrals/commissions/${id}/status`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    getSettings: () => request<ReferralSettingsData>('/api/admin/referrals/settings'),
+    updateSettings: (data: Partial<ReferralSettingsData>) =>
+      request<ReferralSettingsData>('/api/admin/referrals/settings', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+  },
+
+  chat: {
+    sendMessage: (messages: { role: string; content: string }[], message?: string) =>
+      request<{ role: string; reply: string; timestamp: string }>('/api/chat', {
+        method: 'POST',
+        body: JSON.stringify({ messages, message }),
       }),
   },
 

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { Service } from '../models/index.js';
+import { pingSearchEngines } from '../utils/seoPing.js';
 
 export const getPublicServices = async (_req: Request, res: Response): Promise<void> => {
   try {
@@ -52,6 +53,9 @@ export const createService = async (req: Request, res: Response): Promise<void> 
     });
 
     res.status(201).json({ success: true, message: 'Service created successfully.', data: newService });
+
+    // Ping search engines for faster re-indexing
+    pingSearchEngines(req.get('host')).catch(err => console.error('SEO Ping Error:', err));
   } catch (error: any) {
     res.status(500).json({ success: false, message: 'Failed to create service.' });
   }
@@ -67,6 +71,11 @@ export const updateService = async (req: Request, res: Response): Promise<void> 
 
     const updated = await Service.findByIdAndUpdate(req.params.id, req.body, { new: true });
     res.json({ success: true, message: 'Service updated successfully.', data: updated });
+
+    // Ping search engines if the service is active
+    if (updated?.isActive) {
+      pingSearchEngines(req.get('host')).catch(err => console.error('SEO Ping Error:', err));
+    }
   } catch (error: any) {
     res.status(500).json({ success: false, message: 'Failed to update service.' });
   }

@@ -59,7 +59,7 @@ export const ServicesSection: React.FC<{ limit?: number; showHeader?: boolean }>
 
   const renderIcon = (iconName: string) => {
     const IconComponent = iconMap[iconName] || Code2;
-    return <IconComponent className="w-6 h-6 text-blue-400" />;
+    return <IconComponent className="w-6 h-6 text-blue-400" aria-hidden="true" />;
   };
 
   return (

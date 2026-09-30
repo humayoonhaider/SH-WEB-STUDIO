@@ -556,7 +556,130 @@ export const AdminSettingsPage: React.FC = () => {
 
         {/* Tab 5: Homepage Content */}
         {activeTab === 'homepage' && (
-          <div className="space-y-6">
+          <div className="space-y-8">
+            {/* Special Offer Banner Controls */}
+            <div className="p-6 rounded-3xl bg-gradient-to-r from-blue-950/40 via-indigo-950/30 to-amber-950/20 border border-blue-500/40 space-y-6 shadow-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#262838]">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      Top Announcement Bar & Hero Badge
+                    </span>
+                    <h2 className="text-base font-bold text-white font-heading">
+                      Special Offer & Promotion Banner
+                    </h2>
+                  </div>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    Control the limited-time referral/discount promotion displayed at the top of the website and in the Hero section.
+                  </p>
+                </div>
+
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.showTopOfferBanner !== false}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        showTopOfferBanner: e.target.checked,
+                      }))
+                    }
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-[#262833] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <span className="ml-3 text-xs font-bold text-white">
+                    {formData.showTopOfferBanner !== false ? 'Active (Visible)' : 'Disabled (Hidden)'}
+                  </span>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-300 mb-1.5">
+                    Badge / Tag Text
+                  </label>
+                  <input
+                    type="text"
+                    name="topOfferBadgeText"
+                    value={formData.topOfferBadgeText || ''}
+                    onChange={handleChange}
+                    placeholder="e.g. 🔥 LIMITED TIME EXCLUSIVE"
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#121318] border border-[#262833] text-white text-xs font-mono focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-300 mb-1.5">
+                    Highlight Tag / Cut (Pill)
+                  </label>
+                  <input
+                    type="text"
+                    name="topOfferHighlightText"
+                    value={formData.topOfferHighlightText || ''}
+                    onChange={handleChange}
+                    placeholder="e.g. 10% Direct Payout"
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#121318] border border-[#262833] text-white text-xs focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-300 mb-1.5">
+                    Offer Headline / Message
+                  </label>
+                  <input
+                    type="text"
+                    name="topOfferTitle"
+                    value={formData.topOfferTitle || ''}
+                    onChange={handleChange}
+                    placeholder="e.g. Refer a business & earn 10% direct commission on their web project"
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#121318] border border-[#262833] text-white text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-300 mb-1.5">
+                    CTA Button Text
+                  </label>
+                  <input
+                    type="text"
+                    name="topOfferButtonText"
+                    value={formData.topOfferButtonText || ''}
+                    onChange={handleChange}
+                    placeholder="e.g. Claim Your Partner Link"
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#121318] border border-[#262833] text-white text-xs focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-300 mb-1.5">
+                    CTA Button Destination URL
+                  </label>
+                  <input
+                    type="text"
+                    name="topOfferButtonUrl"
+                    value={formData.topOfferButtonUrl || ''}
+                    onChange={handleChange}
+                    placeholder="/referral-program"
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#121318] border border-[#262833] text-white text-xs font-mono focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-300 mb-1.5">
+                    Urgency Subtext / Expiry Note
+                  </label>
+                  <input
+                    type="text"
+                    name="topOfferExpiryText"
+                    value={formData.topOfferExpiryText || ''}
+                    onChange={handleChange}
+                    placeholder="e.g. Limited partner slots available for Q4"
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#121318] border border-[#262833] text-white text-xs focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+
             <h2 className="text-base font-bold text-white font-heading border-b border-[#1C1D24] pb-3">
               Homepage Copy & Hero Section
             </h2>

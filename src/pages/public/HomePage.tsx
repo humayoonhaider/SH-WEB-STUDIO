@@ -1,4 +1,5 @@
 import React from 'react';
+import { SEO } from '../../components/common/SEO';
 import { Hero } from '../../components/public/Hero';
 import { IntroSection } from '../../components/public/IntroSection';
 import { ServicesSection } from '../../components/public/ServicesSection';
@@ -14,6 +15,7 @@ import { FooterCta } from '../../components/public/FooterCta';
 export const HomePage: React.FC = () => {
   return (
     <div className="w-full">
+      <SEO />
       <Hero />
       <IntroSection />
       <MissionSection />

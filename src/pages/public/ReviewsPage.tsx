@@ -15,12 +15,10 @@ import { Testimonial } from '../../types';
 import { api } from '../../services/api';
 import { Modal } from '../../components/common/Modal';
 import { Spinner } from '../../components/common/Loader';
+import { SEO } from '../../components/common/SEO';
 import { defaultTestimonials } from '../../data/defaultTestimonials';
 
 export const ReviewsPage: React.FC = () => {
-  useEffect(() => {
-    document.title = 'Client Success Stories & Reviews | SH Web Studio';
-  }, []);
   const [testimonials, setTestimonials] = useState<Testimonial[]>(defaultTestimonials);
   const [loading, setLoading] = useState(false);
   const [selectedTag, setSelectedTag] = useState<string>('all');
@@ -101,8 +99,26 @@ export const ReviewsPage: React.FC = () => {
     ? (testimonials.reduce((acc, cur) => acc + (cur.rating || 5), 0) / totalCount).toFixed(1)
     : '5.0';
 
+  // Schema for reviews
+  const reviewSchema = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": "SH Web Studio Development Services",
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": avgRating,
+      "reviewCount": totalCount
+    }
+  };
+
   return (
-    <div className="pt-28 pb-20 bg-[#0B0B0F] min-h-screen">
+    <div className="pt-12 pb-20 bg-[#0B0B0F] min-h-screen">
+      <h1 className="sr-only">Client Reviews & Testimonials | SH Web Studio</h1>
+      <SEO 
+        title="Client Success Stories & Reviews | Verified Feedback"
+        description="Read authentic feedback from founders and businesses who trusted SH Web Studio for their web development and digital architecture needs."
+        schema={reviewSchema}
+      />
       {/* Header Banner */}
       <section className="relative overflow-hidden py-16 border-b border-[#1C1D24]">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-blue-600/10 rounded-full blur-[140px] pointer-events-none" />

@@ -108,7 +108,8 @@ export const Footer: React.FC = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="group flex items-center justify-between text-xs text-neutral-300 hover:text-white bg-[#121318] hover:bg-[#1A1B22] border border-[#262833] hover:border-blue-500/40 px-2.5 py-1.5 rounded-lg transition-all"
-                      title={`${item.name} (${item.url})`}
+                      title={`${item.name} - ${item.title}`}
+                      aria-label={`Visit ${item.name} (${item.title})`}
                     >
                       <span className="truncate group-hover:text-blue-400 transition-colors font-medium">
                         {item.name}
@@ -145,6 +146,12 @@ export const Footer: React.FC = () => {
               <li>
                 <Link to="/about" className="hover:text-white transition-colors">
                   About Us
+                </Link>
+              </li>
+              <li>
+                <Link to="/referral-program" className="hover:text-white transition-colors flex items-center gap-1.5 text-blue-400">
+                  <span>Refer & Earn</span>
+                  <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-blue-500/20 text-blue-300">10%</span>
                 </Link>
               </li>
               <li>

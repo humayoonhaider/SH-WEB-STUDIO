@@ -27,6 +27,13 @@ export interface SiteSettings {
   ctaTitle: string;
   ctaDescription: string;
   footerText: string;
+  showTopOfferBanner?: boolean;
+  topOfferBadgeText?: string;
+  topOfferTitle?: string;
+  topOfferHighlightText?: string;
+  topOfferButtonText?: string;
+  topOfferButtonUrl?: string;
+  topOfferExpiryText?: string;
   customPortfolios?: Array<{
     name: string;
     url: string;
@@ -169,3 +176,127 @@ export interface PricingPlan {
   createdAt?: string;
   updatedAt?: string;
 }
+
+export interface UserPaymentDetails {
+  method: 'Bank Transfer' | 'Easypaisa' | 'JazzCash' | 'PayPal' | 'Other' | '';
+  accountHolderName: string;
+  bankName: string;
+  accountNumber: string;
+  routingOrSwift?: string;
+  notes?: string;
+}
+
+export interface PublicUser {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  company?: string;
+  role: 'user' | 'admin';
+  referralCode: string;
+  referralLink: string;
+  referredBy?: string;
+  referredByCode?: string;
+  paymentDetails?: UserPaymentDetails;
+  createdAt?: string;
+}
+
+export interface UserReferralItem {
+  id: string;
+  referredUserName: string;
+  referredUserCompany?: string;
+  registeredAt: string;
+  status: string;
+  qualifyingPayment: number;
+  commission: number;
+  commissionsCount: number;
+  commissions: Array<{
+    id: string;
+    amount: number;
+    rate: number;
+    paymentAmount: number;
+    currency: string;
+    status: 'pending' | 'approved' | 'paid' | 'rejected';
+    createdAt: string;
+    approvedAt?: string;
+    paidAt?: string;
+  }>;
+}
+
+export interface UserReferralStats {
+  totalReferrals: number;
+  registeredReferrals: number;
+  qualifiedReferrals: number;
+  convertedClients: number;
+  totalQualifyingPayments: number;
+  totalEarnedCommission: number;
+  pendingCommission: number;
+  approvedCommission: number;
+  paidCommission: number;
+  currency: string;
+}
+
+export interface ReferralSettingsData {
+  referralProgramEnabled: boolean;
+  commissionRate: number;
+  minPayoutAmount: number;
+  payoutNotice: string;
+  termsText: string;
+}
+
+export interface AdminReferralItem {
+  id: string;
+  status: string;
+  referralCode: string;
+  registeredAt: string;
+  convertedAt?: string;
+  notes?: string;
+  referrer: {
+    id: string;
+    name: string;
+    email: string;
+    phone?: string;
+    company?: string;
+    paymentDetails?: UserPaymentDetails;
+  } | null;
+  referredUser: {
+    id: string;
+    name: string;
+    email: string;
+    phone?: string;
+    company?: string;
+  } | null;
+  totalQualifyingPayment: number;
+  totalCommission: number;
+  paymentsCount: number;
+  commissionsCount: number;
+  commissions: Array<{
+    id: string;
+    paymentAmount: number;
+    commissionRate: number;
+    commissionAmount: number;
+    currency: string;
+    status: 'pending' | 'approved' | 'paid' | 'rejected';
+    approvedAt?: string;
+    paidAt?: string;
+    rejectedAt?: string;
+    payoutMethod?: string;
+    payoutReference?: string;
+    adminNote?: string;
+    createdAt: string;
+  }>;
+}
+
+export interface AdminReferralStats {
+  totalUsers: number;
+  totalReferrals: number;
+  convertedClients: number;
+  totalRevenue: number;
+  totalCommissions: number;
+  pendingCommissions: number;
+  approvedCommissions: number;
+  paidCommissions: number;
+  commissionRate: number;
+  referralProgramEnabled: boolean;
+}
+

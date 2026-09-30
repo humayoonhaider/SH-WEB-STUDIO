@@ -18,6 +18,7 @@ import {
   Star,
   DollarSign,
   Activity,
+  Share2,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSite } from '../../context/SiteContext';
@@ -32,6 +33,7 @@ export const AdminLayout: React.FC = () => {
 
   const navItems = [
     { label: 'Dashboard', path: '/admin', icon: LayoutDashboard },
+    { label: 'Referral Program', path: '/admin/referrals', icon: Share2 },
     { label: 'Website Settings', path: '/admin/settings', icon: Settings },
     { label: 'Services', path: '/admin/services', icon: Layers },
     { label: 'Projects', path: '/admin/projects', icon: Briefcase },

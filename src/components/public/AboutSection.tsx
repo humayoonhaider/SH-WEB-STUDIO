@@ -128,6 +128,7 @@ export const AboutSection: React.FC<{ showFounders?: boolean }> = ({ showFounder
                           rel="noopener noreferrer"
                           className="p-1.5 rounded-lg hover:text-white hover:bg-[#1E2028] transition-colors"
                           title="Personal Portfolio"
+                          aria-label={`${member.name} Portfolio`}
                         >
                           <Globe className="w-3.5 h-3.5 text-blue-400" />
                         </a>
@@ -138,6 +139,7 @@ export const AboutSection: React.FC<{ showFounders?: boolean }> = ({ showFounder
                           href={`mailto:${member.email}`}
                           className="p-1.5 rounded-lg hover:text-white hover:bg-[#1E2028] transition-colors"
                           title={`Email ${member.name} (${member.email})`}
+                          aria-label={`Email ${member.name}`}
                         >
                           <Mail className="w-3.5 h-3.5 text-neutral-300 hover:text-blue-400" />
                         </a>
@@ -150,6 +152,7 @@ export const AboutSection: React.FC<{ showFounders?: boolean }> = ({ showFounder
                           rel="noopener noreferrer"
                           className="p-1.5 rounded-lg hover:text-white hover:bg-[#1E2028] transition-colors"
                           title="GitHub Profile"
+                          aria-label={`${member.name} GitHub Profile`}
                         >
                           <Github className="w-3.5 h-3.5" />
                         </a>
@@ -162,6 +165,7 @@ export const AboutSection: React.FC<{ showFounders?: boolean }> = ({ showFounder
                           rel="noopener noreferrer"
                           className="p-1.5 rounded-lg hover:text-blue-400 hover:bg-[#1E2028] transition-colors"
                           title="LinkedIn Profile"
+                          aria-label={`${member.name} LinkedIn Profile`}
                         >
                           <Linkedin className="w-3.5 h-3.5" />
                         </a>

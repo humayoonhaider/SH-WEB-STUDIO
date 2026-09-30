@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { Project } from '../models/index.js';
 import { seedInitialData } from '../seed/seedData.js';
+import { pingSearchEngines } from '../utils/seoPing.js';
 
 export const getPublicProjects = async (_req: Request, res: Response): Promise<void> => {
   try {
@@ -30,11 +31,54 @@ export const getAllProjects = async (_req: Request, res: Response): Promise<void
 
 export const getProjectBySlug = async (req: Request, res: Response): Promise<void> => {
   try {
-    const project = await Project.findOne({ slug: req.params.slug, isActive: true });
+    const rawParam = decodeURIComponent(req.params.slug || '').trim();
+    if (!rawParam) {
+      res.status(400).json({ success: false, message: 'Project identifier is required.' });
+      return;
+    }
+
+    const count = await Project.countDocuments();
+    if (count === 0) {
+      await seedInitialData(true);
+    }
+
+    // 1. Try finding by exact slug
+    let project = await Project.findOne({ slug: rawParam, isActive: true });
+
+    // 2. Try finding by slug without active constraint if admin or previewing
+    if (!project) {
+      project = await Project.findOne({ slug: rawParam });
+    }
+
+    // 3. Try finding in all projects by case-insensitive slug, ID, or generated slug
+    if (!project) {
+      const allProjects = await Project.find({});
+      project =
+        allProjects.find((p: any) => {
+          const pSlug = (p.slug || '').toLowerCase();
+          const pId = String(p._id);
+          const pTitleSlug = (p.title || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)/g, '');
+          const target = rawParam.toLowerCase();
+
+          return pSlug === target || pId === target || pTitleSlug === target;
+        }) || null;
+    }
+
+    // 4. Try finding by direct ID
+    if (!project) {
+      try {
+        project = await Project.findById(rawParam);
+      } catch {}
+    }
+
     if (!project) {
       res.status(404).json({ success: false, message: 'Project not found.' });
       return;
     }
+
     res.json({ success: true, data: project });
   } catch (error: any) {
     res.status(500).json({ success: false, message: 'Failed to retrieve project.' });
@@ -43,7 +87,16 @@ export const getProjectBySlug = async (req: Request, res: Response): Promise<voi
 
 export const getProjectById = async (req: Request, res: Response): Promise<void> => {
   try {
-    const project = await Project.findById(req.params.id);
+    const rawId = req.params.id;
+    let project = null;
+    try {
+      project = await Project.findById(rawId);
+    } catch {}
+
+    if (!project) {
+      project = await Project.findOne({ slug: rawId });
+    }
+
     if (!project) {
       res.status(404).json({ success: false, message: 'Project not found.' });
       return;
@@ -85,6 +138,9 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
     });
 
     res.status(201).json({ success: true, message: 'Project created successfully.', data: newProject });
+
+    // Ping search engines for faster re-indexing
+    pingSearchEngines(req.get('host')).catch(err => console.error('SEO Ping Error:', err));
   } catch (error: any) {
     res.status(500).json({ success: false, message: 'Failed to create project.' });
   }
@@ -105,6 +161,11 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
 
     const updated = await Project.findByIdAndUpdate(req.params.id, updateData, { new: true });
     res.json({ success: true, message: 'Project updated successfully.', data: updated });
+
+    // Ping search engines if the project is active
+    if (updated?.isActive) {
+      pingSearchEngines(req.get('host')).catch(err => console.error('SEO Ping Error:', err));
+    }
   } catch (error: any) {
     res.status(500).json({ success: false, message: 'Failed to update project.' });
   }

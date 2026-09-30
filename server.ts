@@ -1,60 +1,131 @@
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import express from 'express';
+import fs from 'fs';
 import app from './server/app.js';
 import { connectDB } from './server/config/db.js';
 import { seedInitialData } from './server/seed/seedData.js';
+import { errorHandler } from './server/middleware/errorHandler.js';
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = Number(process.env.PORT) || 3000;
-const isProduction = process.env.NODE_ENV === 'production';
-console.log(`[Server] Environment: ${process.env.NODE_ENV}, isProduction: ${isProduction}`);
+// Ensure we pick up the correct PORT from Railway
+const PORT = process.env.PORT || 8080;
+const isProduction = process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT !== undefined;
 
 async function startServer() {
   try {
-    // 1. Setup Vite in development or serve static in production
-    if (!isProduction) {
-      const { createServer: createViteServer } = await import('vite');
-      const vite = await createViteServer({
-        server: { middlewareMode: true },
-        appType: 'spa',
-      });
-      app.use(vite.middlewares);
-      console.log('🚀 Vite dev middleware attached');
-    } else {
-      const distPath = path.resolve(__dirname, 'dist');
-      const express = (await import('express')).default;
-      app.use(express.static(distPath));
-      app.get('*', (_req, res) => {
-        res.sendFile(path.resolve(distPath, 'index.html'));
-      });
-      console.log(`📦 Serving production build from ${distPath}`);
-    }
+    console.log(`[DEPLOY-LOG] Starting Server...`);
+    console.log(`[DEPLOY-LOG] Mode: ${isProduction ? 'PROD' : 'DEV'}`);
+    console.log(`[DEPLOY-LOG] Port: ${PORT}`);
 
-    // 2. Start Listening (Immediate responsiveness)
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`⚡ Server running on http://0.0.0.0:${PORT}`);
-      console.log(`🛡️  Admin route accessible at http://0.0.0.0:${PORT}/admin/login`);
+    // 1. Detailed Request Logging for Debugging
+    app.use((req, res, next) => {
+      const start = Date.now();
+      const ua = req.get('User-Agent') || 'Unknown';
+      
+      res.on('finish', () => {
+        const duration = Date.now() - start;
+        if (res.statusCode >= 500) {
+          console.error(`🚨 [5XX-DETECTOR] ${req.method} ${req.url} | Status: ${res.statusCode} | Duration: ${duration}ms | UA: ${ua}`);
+        } else if (req.url.includes('sitemap') || req.url.includes('robots') || req.url.includes('google')) {
+          console.log(`🔍 [SEO-VISIT] ${req.method} ${req.url} | Status: ${res.statusCode} | Duration: ${duration}ms | UA: ${ua}`);
+        }
+      });
+      next();
     });
 
-    // 3. Initialize DB & auto-seed baseline data (Background)
-    (async () => {
-      try {
-        console.log('[Storage] Attempting database initialization...');
-        await connectDB();
-        await seedInitialData();
-      } catch (dbErr) {
-        console.warn('⚠️ Warning during DB connect/seed, operating in persistent local storage mode:', dbErr);
+    // 2. Static Content Configuration
+    const distPath = path.resolve(__dirname, 'dist');
+    
+    if (isProduction) {
+      if (fs.existsSync(distPath)) {
+        app.use(express.static(distPath, { 
+          maxAge: '1h', 
+          index: false,
+          redirect: false 
+        }));
+        console.log(`[DEPLOY-LOG] Static assets served from: ${distPath}`);
+      } else {
+        console.warn(`[DEPLOY-LOG] WARNING: dist folder not found at ${distPath}`);
       }
-    })();
+    } else {
+      try {
+        const { createServer: createViteServer } = await import('vite');
+        const vite = await createViteServer({
+          server: { middlewareMode: true },
+          appType: 'spa',
+        });
+        app.use(vite.middlewares);
+        console.log('[DEPLOY-LOG] Vite dev middleware active');
+      } catch (e) {
+        console.warn('[DEPLOY-LOG] Vite init failed, check node_modules');
+      }
+    }
+
+    // 3. Catch-all HTML Route (SPA Support)
+    app.get('*', async (req, res, next) => {
+      // Ignore API routes and static files with extensions
+      if (req.path.startsWith('/api/') || req.path.includes('.')) {
+        // If it's a static file that wasn't caught by express.static, return 404
+        if (req.path.includes('.')) {
+          return res.status(404).send('Not Found');
+        }
+        return next();
+      }
+
+      try {
+        const indexPath = path.resolve(isProduction && fs.existsSync(distPath) ? distPath : __dirname, 'index.html');
+        
+        if (fs.existsSync(indexPath)) {
+          return res.sendFile(indexPath, (err) => {
+            if (err) {
+              console.error(`[DEPLOY-LOG] Error sending index.html: ${err.message}`);
+              if (!res.headersSent) {
+                res.status(500).send('Internal Server Error');
+              }
+            }
+          });
+        } else {
+          // Absolute fallback to prevent 5xx if build fails
+          console.warn(`[DEPLOY-LOG] index.html missing at ${indexPath}. Serving recovery shell.`);
+          res.status(200).send('<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>SH Web Studio</title></head><body style="background:#0b0b0f;color:#fff;text-align:center;padding:50px"><h1>Studio Optimization</h1><p>The studio is being prepared. Please refresh in a moment.</p></body></html>');
+        }
+      } catch (e: any) {
+        console.error(`[DEPLOY-LOG] Catch-all route error: ${e.message}`);
+        next(e);
+      }
+    });
+
+    // 4. Global Error Handler
+    app.use(errorHandler);
+
+    // 5. Start Listening
+    app.listen(Number(PORT), '0.0.0.0', () => {
+      console.log(`🚀 [DEPLOY-LOG] Server is READY and listening on port ${PORT}`);
+    });
+
+    // 6. DB Connection (Non-blocking)
+    connectDB().then(() => seedInitialData()).catch(err => console.error(`[DEPLOY-LOG] DB Init Error: ${err.message}`));
+
   } catch (error) {
-    console.error('Fatal error starting server:', error);
+    console.error('[DEPLOY-LOG] FATAL CRASH DURING STARTUP:', error);
     process.exit(1);
   }
 }
+
+// Global Safety Net
+process.on('unhandledRejection', (reason) => {
+  console.error('[DEPLOY-LOG] UNHANDLED REJECTION:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[DEPLOY-LOG] UNCAUGHT EXCEPTION:', err);
+  if (isProduction) process.exit(1);
+});
 
 startServer();
