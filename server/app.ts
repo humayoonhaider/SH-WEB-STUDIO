@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import fs from 'fs';
+import path from 'path';
 import authRoutes from './routes/authRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
 import servicesRoutes from './routes/servicesRoutes.js';
@@ -13,91 +15,232 @@ import statsRoutes from './routes/statsRoutes.js';
 import testimonialRoutes from './routes/testimonialRoutes.js';
 import pricingRoutes from './routes/pricingRoutes.js';
 import mediaRoutes from './routes/mediaRoutes.js';
-import userAuthRoutes from './routes/userAuthRoutes.js';
-import referralRoutes from './routes/referralRoutes.js';
-import adminReferralRoutes from './routes/adminReferralRoutes.js';
-import chatRoutes from './routes/chatRoutes.js';
-import { Project } from './models/index.js';
+import { seedInitialData } from './seed/seedData.js';
+import { errorHandler } from './middleware/errorHandler.js';
+import { Project, Service } from './models/index.js';
 
 const app = express();
 
-// 1. Basic Middleware & Security
-app.set('trust proxy', 1);
-app.disable('x-powered-by');
+// Enable reverse proxy trust for Railway / Cloudflare (prevents IP collision and 429 errors)
+app.set('trust proxy', true);
 
-app.use(helmet({
-  contentSecurityPolicy: false,
-  crossOriginEmbedderPolicy: false,
-}));
-
-app.use(cors({
-  origin: true,
-  credentials: true,
-}));
-
-app.use(express.json({ limit: '20mb' }));
-app.use(express.urlencoded({ extended: true, limit: '20mb' }));
-
-// 2. Health & SEO Endpoints (High priority, minimal dependency)
-app.get('/api/health', (_req, res) => {
-  res.status(200).json({ status: 'ok', time: new Date().toISOString() });
-});
-
-app.get('/sitemap.xml', async (req, res) => {
-  const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
-  const host = req.get('host') || 'sh-web-studio.up.railway.app';
-  const baseUrl = `${protocol}://${host}`;
-  const today = new Date().toISOString().split('T')[0];
-
+// Ultra-fast Sitemap.xml (Serves instantly with static file priority and dynamic fallback)
+app.get('/sitemap.xml', async (_req, res) => {
   try {
-    // Attempt DB fetch with short timeout
-    const projectsPromise = Project.find({ isActive: true });
-    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000));
-    
-    let projects: any[] = [];
+    // 1. Try serving pre-generated static XML directly (0ms response, zero db dependency)
+    const candidates = [
+      path.resolve(process.cwd(), 'public', 'sitemap.xml'),
+      path.resolve(process.cwd(), 'dist', 'sitemap.xml'),
+      path.resolve(process.cwd(), 'sitemap.xml'),
+    ];
+
+    for (const filePath of candidates) {
+      if (fs.existsSync(filePath)) {
+        const content = fs.readFileSync(filePath, 'utf-8');
+        res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+        res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        return res.status(200).send(content);
+      }
+    }
+
+    // 2. Dynamic Fallback
+    const baseUrl = (process.env.SITE_URL || 'https://shwebstudio.up.railway.app').replace(/\/$/, '');
+    const today = new Date().toISOString().split('T')[0];
+
+    let dynamicProjects: any[] = [];
     try {
-      projects = await Promise.race([projectsPromise, timeoutPromise]) as any[];
+      dynamicProjects = await Project.find({ isActive: true });
     } catch {
-      console.warn('[Sitemap] Using static fallback due to DB delay');
+      dynamicProjects = [];
     }
 
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>${baseUrl}/</loc><lastmod>${today}</lastmod><priority>1.0</priority></url>
-  <url><loc>${baseUrl}/services</loc><lastmod>${today}</lastmod><priority>0.8</priority></url>
-  <url><loc>${baseUrl}/work</loc><lastmod>${today}</lastmod><priority>0.8</priority></url>
-  <url><loc>${baseUrl}/about</loc><lastmod>${today}</lastmod><priority>0.8</priority></url>
-  <url><loc>${baseUrl}/contact</loc><lastmod>${today}</lastmod><priority>0.8</priority></url>
-  <url><loc>${baseUrl}/pricing</loc><lastmod>${today}</lastmod><priority>0.8</priority></url>
-  <url><loc>${baseUrl}/referral-program</loc><lastmod>${today}</lastmod><priority>0.8</priority></url>`;
+  <url>
+    <loc>${baseUrl}/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/services</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/work</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/about</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/reviews</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/contact</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/pricing</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/process</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/work/e-commerce-shop</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/work/intelligence-hub</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+</urlset>`;
 
-    projects.forEach(p => {
-      if (p.slug) xml += `\n  <url><loc>${baseUrl}/work/${p.slug}</loc><lastmod>${today}</lastmod><priority>0.7</priority></url>`;
-    });
-
-    xml += '\n</urlset>';
-    res.header('Content-Type', 'application/xml').send(xml);
-  } catch (err) {
-    res.status(200).header('Content-Type', 'application/xml').send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${baseUrl}/</loc></url></urlset>`);
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    return res.status(200).send(xml);
+  } catch (error) {
+    console.error('Sitemap critical fallback error:', error);
+    const hardFallback = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://shwebstudio.up.railway.app/</loc>
+    <priority>1.0</priority>
+  </url>
+</urlset>`;
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    return res.status(200).send(hardFallback);
   }
 });
 
-app.get('/robots.txt', (req, res) => {
-  const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
-  const host = req.get('host') || 'sh-web-studio.up.railway.app';
-  res.header('Content-Type', 'text/plain').send(`User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /api/\n\nSitemap: ${protocol}://${host}/sitemap.xml`);
+// Explicit Google Search Console HTML File Verification Routes
+app.get('/googlea17172bb37818be6.html', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.status(200).send('google-site-verification: googlea17172bb37818be6.html');
 });
 
-// Google Verification Files (Universal)
+app.get('/googleQJcq_H2XFIcZrSRz9nOmXJE5-0BdoYHtPpFDf25EKl8.html', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.status(200).send('google-site-verification: googleQJcq_H2XFIcZrSRz9nOmXJE5-0BdoYHtPpFDf25EKl8.html');
+});
+
+// Generic Google Verification fallback route
 app.get('/google:code.html', (req, res) => {
-  res.send(`google-site-verification: google${req.params.code}.html`);
+  const code = req.params.code;
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.status(200).send(`google-site-verification: google${code}.html`);
 });
 
-// 3. API Routes
+// Dynamic Robots.txt Route
+app.get('/robots.txt', (_req, res) => {
+  const robotsPath = path.resolve(process.cwd(), 'public', 'robots.txt');
+  if (fs.existsSync(robotsPath)) {
+    const content = fs.readFileSync(robotsPath, 'utf-8');
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.status(200).send(content);
+  }
+
+  const defaultRobots = `User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api
+
+Sitemap: https://shwebstudio.up.railway.app/sitemap.xml
+`;
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.status(200).send(defaultRobots);
+});
+
+// Security Middleware
+app.use(helmet({
+  contentSecurityPolicy: false, // Disabled to avoid issues with inline scripts in dev/pre-rendered apps
+  crossOriginEmbedderPolicy: false,
+}));
+
+// CORS Configuration
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // In development/preview, we allow all. In production, we should restrict this.
+      callback(null, true);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+import { getDBStatusDetails, connectDB } from './config/db.js';
+
+// API Health Check
+app.get('/api/health', (_req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    service: 'SH Web Studio API',
+    storage: getDBStatusDetails(),
+  });
+});
+
+app.get('/api/system/storage-status', (_req, res) => {
+  res.json({
+    success: true,
+    data: getDBStatusDetails(),
+  });
+});
+
+app.post('/api/system/retry-atlas', async (_req, res) => {
+  const connected = await connectDB();
+  res.json({
+    success: connected,
+    data: getDBStatusDetails(),
+  });
+});
+
+app.post('/api/system/seed-defaults', async (req, res) => {
+  try {
+    const force = req.body.force === true || req.query.force === 'true';
+    await seedInitialData(force);
+    res.json({ success: true, message: 'Default studio data seeded successfully.' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Failed to seed default data.' });
+  }
+});
+
+// Mount Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/user/auth', userAuthRoutes);
-app.use('/api/referrals', referralRoutes);
-app.use('/api/admin/referrals', adminReferralRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/services', servicesRoutes);
 app.use('/api/projects', projectsRoutes);
@@ -109,11 +252,13 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/testimonials', testimonialRoutes);
 app.use('/api/pricing', pricingRoutes);
 app.use('/api/media', mediaRoutes);
-app.use('/api/chat', chatRoutes);
 
-// 4. API Fallback
+// 404 for unhandled API endpoints
 app.all('/api/*', (_req, res) => {
-  res.status(404).json({ success: false, message: 'API Route Not Found' });
+  res.status(404).json({ success: false, message: 'API endpoint not found.' });
 });
+
+// Centralized error handler
+app.use(errorHandler);
 
 export default app;

@@ -42,12 +42,3 @@ export const CardSkeleton: React.FC<{ count?: number }> = ({ count = 3 }) => {
     </div>
   );
 };
-
-export const PageLoader: React.FC<{ message?: string }> = ({ message = 'Loading...' }) => {
-  return (
-    <div className="min-h-[60vh] flex flex-col items-center justify-center p-8">
-      <Spinner size="lg" label={message} />
-    </div>
-  );
-};
-

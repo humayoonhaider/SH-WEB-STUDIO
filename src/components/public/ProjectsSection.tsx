@@ -72,11 +72,7 @@ export const ProjectsSection: React.FC<{ limit?: number; showHeader?: boolean }>
                 className="group flex flex-col rounded-2xl bg-[#121318] border border-[#262833] overflow-hidden transition-all duration-200 hover:border-neutral-600 hover:bg-[#15161D]"
               >
                 {/* Project Visual / Abstract Preview */}
-                <Link
-                  to={`/work/${encodeURIComponent(project.slug || project._id)}`}
-                  className="relative aspect-[16/10] bg-[#17181D] border-b border-[#262833] overflow-hidden flex items-center justify-center block group/visual cursor-pointer"
-                  aria-label={`View case details for ${project.title}`}
-                >
+                <div className="relative aspect-[16/10] bg-[#17181D] border-b border-[#262833] overflow-hidden flex items-center justify-center">
                   {project.imageUrl ? (
                     <OptimizedImage
                       src={project.imageUrl}
@@ -111,11 +107,11 @@ export const ProjectsSection: React.FC<{ limit?: number; showHeader?: boolean }>
 
                   {/* Featured Tag */}
                   {project.featured && (
-                    <div className="absolute top-3 right-3 text-[10px] font-semibold uppercase tracking-wider bg-blue-600/90 text-white px-2.5 py-1 rounded-md shadow-sm pointer-events-none">
+                    <div className="absolute top-3 right-3 text-[10px] font-semibold uppercase tracking-wider bg-blue-600/90 text-white px-2.5 py-1 rounded-md shadow-sm">
                       Featured
                     </div>
                   )}
-                </Link>
+                </div>
 
                 {/* Project Details */}
                 <div className="p-6 flex-1 flex flex-col justify-between space-y-5">
@@ -126,7 +122,7 @@ export const ProjectsSection: React.FC<{ limit?: number; showHeader?: boolean }>
                     </div>
 
                     <h3 className="text-xl font-bold text-white font-heading tracking-tight group-hover:text-blue-400 transition-colors">
-                      <Link to={`/work/${encodeURIComponent(project.slug || project._id)}`}>
+                      <Link to={`/work/${project.slug}`}>
                         {project.title}
                       </Link>
                     </h3>
@@ -154,11 +150,11 @@ export const ProjectsSection: React.FC<{ limit?: number; showHeader?: boolean }>
                     {/* Action Links */}
                     <div className="flex items-center justify-between pt-2">
                       <Link
-                        to={`/work/${encodeURIComponent(project.slug || project._id)}`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1C1D26] hover:bg-blue-600 border border-[#2B2D3A] hover:border-blue-500 text-xs font-semibold text-neutral-200 hover:text-white transition-all shadow-sm group/btn"
+                        to={`/work/${project.slug}`}
+                        className="text-xs font-semibold text-neutral-300 hover:text-white inline-flex items-center gap-1.5"
                       >
                         <span>Case Details</span>
-                        <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover/btn:translate-x-0.5" />
+                        <ArrowRight className="w-3.5 h-3.5" />
                       </Link>
 
                       <div className="flex items-center gap-3">

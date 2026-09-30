@@ -13,12 +13,6 @@ import {
   SEOSettingsModel,
   TestimonialModel,
   PricingPlanModel,
-  UserModel,
-  ReferralModel,
-  PaymentModel,
-  CommissionModel,
-  ReferralSettingsModel,
-  WithdrawalRequestModel,
   IAdmin,
   ISiteSettings,
   IService,
@@ -29,12 +23,6 @@ import {
   ISEOSettings,
   ITestimonial,
   IPricingPlan,
-  IUser,
-  IReferral,
-  IPayment,
-  ICommission,
-  IReferralSettings,
-  IWithdrawalRequest,
 } from './schemas.js';
 
 const DATA_DIR = path.resolve(process.cwd(), 'server', 'data');
@@ -51,12 +39,6 @@ interface LocalDBData {
   seoSettings: any[];
   testimonials: any[];
   pricingPlans: any[];
-  users: any[];
-  referrals: any[];
-  payments: any[];
-  commissions: any[];
-  referralSettings: any[];
-  withdrawalRequests: any[];
 }
 
 const defaultDBData: LocalDBData = {
@@ -70,12 +52,6 @@ const defaultDBData: LocalDBData = {
   seoSettings: [],
   testimonials: [],
   pricingPlans: [],
-  users: [],
-  referrals: [],
-  payments: [],
-  commissions: [],
-  referralSettings: [],
-  withdrawalRequests: [],
 };
 
 // Ensure data file exists
@@ -397,11 +373,3 @@ export const ContactInquiry = createModelWrapper<IContactInquiry>('contactInquir
 export const SEOSettings = createModelWrapper<ISEOSettings>('seoSettings', SEOSettingsModel);
 export const Testimonial = createModelWrapper<ITestimonial>('testimonials', TestimonialModel);
 export const PricingPlan = createModelWrapper<IPricingPlan>('pricingPlans', PricingPlanModel);
-export const User = createModelWrapper<IUser>('users', UserModel);
-export const Referral = createModelWrapper<IReferral>('referrals', ReferralModel);
-export const Payment = createModelWrapper<IPayment>('payments', PaymentModel);
-export const Commission = createModelWrapper<ICommission>('commissions', CommissionModel);
-export const ReferralSettings = createModelWrapper<IReferralSettings>('referralSettings', ReferralSettingsModel);
-export const WithdrawalRequest = createModelWrapper<IWithdrawalRequest>('withdrawalRequests', WithdrawalRequestModel);
-
-

@@ -1,18 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ArrowDown, Code, Server, Database, Sparkles, Flame, Gift } from 'lucide-react';
+import { ArrowRight, ArrowDown, Code, Server, Database } from 'lucide-react';
 import { useSite } from '../../context/SiteContext';
 
 export const Hero: React.FC = () => {
   const { settings } = useSite();
 
-  const showOffer = settings.showTopOfferBanner !== false;
-  const offerBadge = settings.topOfferBadgeText || '🔥 LIMITED TIME EXCLUSIVE';
-  const offerTitle = settings.topOfferTitle || 'Refer a business & earn 10% direct commission on web development projects';
-  const offerUrl = settings.topOfferButtonUrl || '/referral-program';
-
   return (
-    <section className="relative min-h-[90vh] flex items-center justify-center pt-12 pb-20 overflow-hidden">
+    <section className="relative min-h-[90vh] flex items-center justify-center pt-28 pb-20 overflow-hidden">
       {/* Subtle architectural background grid */}
       <div
         className="absolute inset-0 opacity-[0.03] pointer-events-none"
@@ -26,31 +21,8 @@ export const Hero: React.FC = () => {
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-blue-600/10 blur-[130px] rounded-full pointer-events-none" />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        {/* Dynamic Special Offer Banner Card inside Hero */}
-        {showOffer && (
-          <div className="mb-8 inline-block animate-in fade-in zoom-in-95 duration-200">
-            <Link
-              to={offerUrl}
-              className="group inline-flex items-center gap-2.5 p-1.5 pr-4 rounded-full bg-gradient-to-r from-blue-900/40 via-indigo-900/30 to-amber-900/20 border border-blue-500/40 hover:border-blue-400/80 transition-all shadow-lg shadow-blue-500/10 hover:shadow-blue-500/25"
-            >
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-300 border border-amber-500/40 shadow-sm animate-pulse">
-                <Flame className="w-3 h-3 text-orange-400" />
-                <span>{offerBadge}</span>
-              </span>
-
-              <span className="text-xs text-neutral-200 font-medium group-hover:text-white transition-colors">
-                {offerTitle}
-              </span>
-
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 group-hover:bg-blue-500 text-white transition-all group-hover:translate-x-0.5">
-                <ArrowRight className="w-3 h-3" />
-              </span>
-            </Link>
-          </div>
-        )}
-
         {/* Unboxed agency kicker */}
-        <div className="flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-widest text-neutral-400 mb-6">
+        <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-neutral-400 mb-6">
           <span className="w-2 h-2 rounded-full bg-blue-500 inline-block animate-pulse" />
           <span>{settings.serviceLine || 'Websites • Web Apps • Digital Solutions'}</span>
         </div>
