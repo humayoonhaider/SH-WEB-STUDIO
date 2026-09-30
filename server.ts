@@ -13,51 +13,47 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = Number(process.env.PORT) || 3000;
+// Ensure we pick up the correct PORT from Railway
+const PORT = process.env.PORT || 8080;
 const isProduction = process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT !== undefined;
-
-// Safety net: Set a global timeout for all requests to prevent "hanging" 5xx errors
-const TIMEOUT_MS = 25000; // 25 seconds (Google crawler timeout is usually around this)
 
 async function startServer() {
   try {
-    console.log(`[BOOT] Environment: ${isProduction ? 'PRODUCTION' : 'DEVELOPMENT'}`);
-    console.log(`[BOOT] Target Port: ${PORT}`);
+    console.log(`[DEPLOY-LOG] Starting Server...`);
+    console.log(`[DEPLOY-LOG] Mode: ${isProduction ? 'PROD' : 'DEV'}`);
+    console.log(`[DEPLOY-LOG] Port: ${PORT}`);
 
-    // 1. Logger & Timeout Safety
+    // 1. Detailed Request Logging for Debugging
     app.use((req, res, next) => {
       const start = Date.now();
+      const ua = req.get('User-Agent') || 'Unknown';
       
-      // Request timeout protection
-      const timeout = setTimeout(() => {
-        if (!res.headersSent) {
-          console.error(`🚨 [TIMEOUT] ${req.method} ${req.originalUrl} exceeded ${TIMEOUT_MS}ms`);
-          res.status(504).send('Request Timeout');
-        }
-      }, TIMEOUT_MS);
-
       res.on('finish', () => {
-        clearTimeout(timeout);
         const duration = Date.now() - start;
         if (res.statusCode >= 500) {
-          console.error(`🚨 [5XX] ${req.method} ${req.originalUrl} -> ${res.statusCode} (${duration}ms)`);
-        } else {
-          console.log(`🌐 [REQ] ${req.method} ${req.originalUrl} -> ${res.statusCode} (${duration}ms)`);
+          console.error(`🚨 [5XX-DETECTOR] ${req.method} ${req.url} | Status: ${res.statusCode} | Duration: ${duration}ms | UA: ${ua}`);
+        } else if (req.url.includes('sitemap') || req.url.includes('robots') || req.url.includes('google')) {
+          console.log(`🔍 [SEO-VISIT] ${req.method} ${req.url} | Status: ${res.statusCode} | Duration: ${duration}ms | UA: ${ua}`);
         }
       });
       next();
     });
 
-    // 2. Static Serving (High Priority)
+    // 2. Static Content Configuration
     const distPath = path.resolve(__dirname, 'dist');
-    if (isProduction && fs.existsSync(distPath)) {
-      app.use(express.static(distPath, { 
-        maxAge: '1h', 
-        index: false,
-        redirect: false // Prevent unwanted redirects that might cause loops
-      }));
-      console.log(`[BOOT] Static assets mapped to ${distPath}`);
-    } else if (!isProduction) {
+    
+    if (isProduction) {
+      if (fs.existsSync(distPath)) {
+        app.use(express.static(distPath, { 
+          maxAge: '1h', 
+          index: false,
+          redirect: false 
+        }));
+        console.log(`[DEPLOY-LOG] Static assets served from: ${distPath}`);
+      } else {
+        console.warn(`[DEPLOY-LOG] WARNING: dist folder not found at ${distPath}`);
+      }
+    } else {
       try {
         const { createServer: createViteServer } = await import('vite');
         const vite = await createViteServer({
@@ -65,30 +61,27 @@ async function startServer() {
           appType: 'spa',
         });
         app.use(vite.middlewares);
-        console.log('🚀 Vite dev middleware attached');
+        console.log('[DEPLOY-LOG] Vite dev middleware active');
       } catch (e) {
-        console.warn('⚠️ Vite failed, check dependencies');
+        console.warn('[DEPLOY-LOG] Vite init failed, check node_modules');
       }
     }
 
-    // 3. Catch-all SPA Handler (Must be registered after all other routes)
+    // 3. Catch-all HTML Route (SPA Support)
     app.get('*', async (req, res, next) => {
-      // Don't intercept API or static files that should have been caught
       if (req.path.startsWith('/api/') || req.path.includes('.')) {
         return next();
       }
 
       try {
-        const indexPath = path.resolve(isProduction ? distPath : __dirname, 'index.html');
+        const indexPath = path.resolve(isProduction && fs.existsSync(distPath) ? distPath : __dirname, 'index.html');
         
         if (fs.existsSync(indexPath)) {
-          // In production, we send the file directly
-          // In development, Vite middleware usually handles this, but we have this as fallback
           return res.sendFile(indexPath);
         } else {
-          // Critical fallback to avoid 5xx
-          console.warn(`[WARN] index.html not found at ${indexPath}. Sending minimal recovery shell.`);
-          return res.status(200).send('<!DOCTYPE html><html><head><title>SH Web Studio</title><meta name="robots" content="noindex"></head><body style="background:#000;color:#fff;text-align:center;padding:50px"><h1>Studio Optimization in Progress</h1><p>Please refresh in a moment.</p></body></html>');
+          // Absolute fallback to prevent 5xx if build fails
+          console.warn(`[DEPLOY-LOG] index.html missing. Serving recovery shell.`);
+          res.status(200).send('<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>SH Web Studio</title></head><body style="background:#0b0b0f;color:#fff;text-align:center;padding:50px"><h1>Studio Optimization</h1><p>The studio is being prepared. Please refresh in a moment.</p></body></html>');
         }
       } catch (e) {
         next(e);
@@ -98,38 +91,28 @@ async function startServer() {
     // 4. Global Error Handler
     app.use(errorHandler);
 
-    // 5. Port Binding
-    const server = app.listen(PORT, '0.0.0.0', () => {
-      console.log(`✅ [READY] Server listening on http://0.0.0.0:${PORT}`);
+    // 5. Start Listening
+    app.listen(Number(PORT), '0.0.0.0', () => {
+      console.log(`🚀 [DEPLOY-LOG] Server is READY and listening on port ${PORT}`);
     });
 
-    // 6. DB Connection (Background)
-    connectDB()
-      .then(() => {
-        console.log('[DB] Connected. Starting data verification...');
-        return seedInitialData();
-      })
-      .catch(err => {
-        console.error('[DB] Failed to initialize storage:', err.message);
-        // Note: The app remains running on local storage mode even if DB fails
-      });
+    // 6. DB Connection (Non-blocking)
+    connectDB().then(() => seedInitialData()).catch(err => console.error(`[DEPLOY-LOG] DB Init Error: ${err.message}`));
 
   } catch (error) {
-    console.error('[CRITICAL] Startup failed:', error);
+    console.error('[DEPLOY-LOG] FATAL CRASH DURING STARTUP:', error);
     process.exit(1);
   }
 }
 
-// Global Process Resilience
+// Global Safety Net
 process.on('unhandledRejection', (reason) => {
-  console.error('🔥 [Unhandled Rejection]:', reason);
+  console.error('[DEPLOY-LOG] UNHANDLED REJECTION:', reason);
 });
+
 process.on('uncaughtException', (err) => {
-  console.error('🔥 [Uncaught Exception]:', err);
-  // Keep process alive if possible in dev, but in prod we might need to restart
-  if (process.env.NODE_ENV === 'production') {
-    console.warn('Attempting to stay alive, but process might be unstable.');
-  }
+  console.error('[DEPLOY-LOG] UNCAUGHT EXCEPTION:', err);
+  if (isProduction) process.exit(1);
 });
 
 startServer();
