@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import fs from 'fs';
 import path from 'path';
 import authRoutes from './routes/authRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
@@ -19,52 +18,45 @@ import userAuthRoutes from './routes/userAuthRoutes.js';
 import referralRoutes from './routes/referralRoutes.js';
 import adminReferralRoutes from './routes/adminReferralRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
-import { seedInitialData } from './seed/seedData.js';
 import { Project } from './models/index.js';
-import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
 
-// Request Investigation Middleware (Log points of potential failure)
-app.use((req, res, next) => {
-  const start = Date.now();
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    if (res.statusCode >= 500) {
-      console.error(`[CRASH-POINT] ${req.method} ${req.url} - Status: ${res.statusCode} - Duration: ${duration}ms`);
-    }
-  });
-  next();
-});
+// Basic Server Settings
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
 
-// Security Middleware
+// Security & CORS
 app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
 }));
-
-// CORS Configuration
 app.use(cors({
-  origin: true,
+  origin: '*',
   credentials: true,
 }));
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
-// Ultra-fast Sitemap.xml
+// 1. Health Check (Immediate response, no DB)
+app.get('/api/health', (_req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// 2. Optimized Sitemap.xml
 app.get('/sitemap.xml', async (req, res) => {
   try {
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
     const host = req.get('host') || 'sh-web-studio.up.railway.app';
     const baseUrl = `${protocol}://${host}`;
     const today = new Date().toISOString().split('T')[0];
 
-    let dynamicProjects: any[] = [];
+    let projects: any[] = [];
     try {
-      dynamicProjects = await Project.find({ isActive: true });
-    } catch {
-      dynamicProjects = [];
+      projects = await Project.find({ isActive: true });
+    } catch (e) {
+      console.warn('[Sitemap] DB fallback used');
     }
 
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -77,7 +69,7 @@ app.get('/sitemap.xml', async (req, res) => {
   <url><loc>${baseUrl}/pricing</loc><lastmod>${today}</lastmod><priority>0.8</priority></url>
   <url><loc>${baseUrl}/referral-program</loc><lastmod>${today}</lastmod><priority>0.8</priority></url>`;
 
-    dynamicProjects.forEach(p => {
+    projects.forEach(p => {
       xml += `\n  <url><loc>${baseUrl}/work/${p.slug || p._id}</loc><lastmod>${today}</lastmod><priority>0.7</priority></url>`;
     });
 
@@ -88,17 +80,20 @@ app.get('/sitemap.xml', async (req, res) => {
   }
 });
 
-// Robots.txt
+// 3. Robots.txt
 app.get('/robots.txt', (req, res) => {
-  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
   const host = req.get('host') || 'sh-web-studio.up.railway.app';
   const content = `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api\n\nSitemap: ${protocol}://${host}/sitemap.xml`;
   res.header('Content-Type', 'text/plain').send(content);
 });
 
-// Google Verification Fallback
+// 4. Google Verification
 app.get('/google:code.html', (req, res) => {
-  res.send(`google-site-verification: google${req.params.code}.html`);
+  const code = req.params.code;
+  // Common format is just the code, but some prefer the full string. 
+  // We send the full string as per the user's manual check.
+  res.send(`google-site-verification: google${code}.html`);
 });
 
 // API Routes
@@ -119,12 +114,9 @@ app.use('/api/pricing', pricingRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/chat', chatRoutes);
 
-// 404 for API
-app.all('/api/*', (req, res) => {
-  res.status(404).json({ success: false, message: 'Endpoint not found' });
+// API 404
+app.all('/api/*', (_req, res) => {
+  res.status(404).json({ success: false, message: 'API endpoint not found' });
 });
-
-// Centralized error handler fallback
-app.use(errorHandler);
 
 export default app;
