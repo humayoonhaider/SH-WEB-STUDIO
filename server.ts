@@ -1,6 +1,8 @@
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import express from 'express';
+import fs from 'fs';
 import app from './server/app.js';
 import { connectDB } from './server/config/db.js';
 import { seedInitialData } from './server/seed/seedData.js';
@@ -12,62 +14,60 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PORT = Number(process.env.PORT) || 3000;
-const isProduction = process.env.NODE_ENV === 'production';
-console.log(`[Server] Environment: ${process.env.NODE_ENV}, isProduction: ${isProduction}`);
+// Improved production detection for Railway
+const isProduction = process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT !== undefined || process.env.RAILWAY_STATIC_URL !== undefined;
 
 async function startServer() {
   try {
-    // 1. Setup Vite in development or serve static in production
+    console.log(`[Server] Initialization... Mode: ${isProduction ? 'PRODUCTION' : 'DEVELOPMENT'}`);
+
+    let vite: any;
     if (!isProduction) {
-      const { createServer: createViteServer } = await import('vite');
-      const vite = await createViteServer({
-        server: { middlewareMode: true },
-        appType: 'spa',
-      });
-      app.use(vite.middlewares);
-      console.log('🚀 Vite dev middleware attached');
+      try {
+        const { createServer: createViteServer } = await import('vite');
+        vite = await createViteServer({
+          server: { middlewareMode: true },
+          appType: 'spa',
+        });
+        app.use(vite.middlewares);
+        console.log('🚀 Vite dev middleware attached');
+      } catch (viteErr) {
+        console.warn('⚠️ Vite failed to initialize, falling back to static serving:', viteErr);
+      }
     } else {
       const distPath = path.resolve(__dirname, 'dist');
-      const express = (await import('express')).default;
-      const fs = await import('fs');
-
       if (fs.existsSync(distPath)) {
         app.use(express.static(distPath, {
           maxAge: '1d',
           index: false 
         }));
-        console.log(`📦 Serving production build from ${distPath}`);
-      } else {
-        console.warn('⚠️ dist directory not found. Fallback to serving index.html from root.');
+        console.log(`📦 Serving static build from ${distPath}`);
       }
     }
 
-    // Define the catch-all route handler (must be registered BEFORE the error handler)
-    // We register it here but it will be executed after other middleware
+    // SPA Catch-all
     app.get('*', async (req, res, next) => {
+      // API routes should have been handled by routers in app.ts
+      if (req.path.startsWith('/api/')) return next();
+
       try {
         const url = req.originalUrl;
-        const fs = await import('fs');
-        const isProd = process.env.NODE_ENV === 'production';
         
-        if (!isProd) {
-          // Dev mode Vite transform
-          const { createServer: createViteServer } = await import('vite');
-          const vite = await createViteServer({ server: { middlewareMode: true }, appType: 'spa' });
+        if (!isProduction && vite) {
           const template = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8');
           const html = await vite.transformIndexHtml(url, template);
           return res.status(200).set({ 'Content-Type': 'text/html' }).end(html);
         } else {
-          // Prod mode file serving
           const distPath = path.resolve(__dirname, 'dist');
-          const indexPath = fs.existsSync(path.join(distPath, 'index.html')) 
-            ? path.join(distPath, 'index.html') 
-            : path.resolve(__dirname, 'index.html');
-            
-          if (fs.existsSync(indexPath)) {
-            return res.sendFile(indexPath);
+          const indexPath = path.resolve(distPath, 'index.html');
+          const rootIndexPath = path.resolve(__dirname, 'index.html');
+          
+          const targetPath = fs.existsSync(indexPath) ? indexPath : rootIndexPath;
+          
+          if (fs.existsSync(targetPath)) {
+            return res.sendFile(targetPath);
           } else {
-            return res.status(500).send('Critical Error: index.html not found. Please check deployment build.');
+            return res.status(404).send('Application build missing. Please run build.');
           }
         }
       } catch (e) {
@@ -75,27 +75,32 @@ async function startServer() {
       }
     });
 
-    // 3. Centralized error handler (MUST be registered after all routes)
+    // Final error handler
     app.use(errorHandler);
 
-    // 4. Start Listening (Immediate responsiveness)
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`⚡ Server running on http://0.0.0.0:${PORT}`);
-      console.log(`🛡️  Admin route accessible at http://0.0.0.0:${PORT}/admin/login`);
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      console.log(`⚡ Server active on port ${PORT}`);
     });
 
-    // 3. Initialize DB & auto-seed baseline data (Background)
-    (async () => {
-      try {
-        console.log('[Storage] Attempting database initialization...');
-        await connectDB();
-        await seedInitialData();
-      } catch (dbErr) {
-        console.warn('⚠️ Warning during DB connect/seed, operating in persistent local storage mode:', dbErr);
+    // Global Process Crash Prevention
+    process.on('unhandledRejection', (reason: any, promise) => {
+      console.error('[Process] Unhandled Rejection at:', promise, 'reason:', reason);
+      // In production, we don't necessarily want to exit, but we should log it
+    });
+
+    process.on('uncaughtException', (error) => {
+      console.error('[Process] Uncaught Exception:', error);
+      // For uncaught exceptions, it is often safer to exit after logging
+      if (isProduction) {
+        process.exit(1);
       }
-    })();
+    });
+
+    // Async background tasks
+    connectDB().then(() => seedInitialData()).catch(err => console.error('[DB] Background init error:', err));
+
   } catch (error) {
-    console.error('Fatal error starting server:', error);
+    console.error('Fatal server error:', error);
     process.exit(1);
   }
 }

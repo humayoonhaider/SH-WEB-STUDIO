@@ -20,37 +20,43 @@ import referralRoutes from './routes/referralRoutes.js';
 import adminReferralRoutes from './routes/adminReferralRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import { seedInitialData } from './seed/seedData.js';
+import { Project } from './models/index.js';
 import { errorHandler } from './middleware/errorHandler.js';
-import { Project, Service } from './models/index.js';
 
 const app = express();
 
-// Enable reverse proxy trust for Railway / Cloudflare (prevents IP collision and 429 errors)
-app.set('trust proxy', true);
+// Request Investigation Middleware (Log points of potential failure)
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    if (res.statusCode >= 500) {
+      console.error(`[CRASH-POINT] ${req.method} ${req.url} - Status: ${res.statusCode} - Duration: ${duration}ms`);
+    }
+  });
+  next();
+});
 
-// Ultra-fast Sitemap.xml (Serves instantly with static file priority and dynamic fallback)
+// Security Middleware
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+}));
+
+// CORS Configuration
+app.use(cors({
+  origin: true,
+  credentials: true,
+}));
+
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Ultra-fast Sitemap.xml
 app.get('/sitemap.xml', async (req, res) => {
   try {
-    // 1. Try serving pre-generated static XML directly (0ms response, zero db dependency)
-    const candidates = [
-      path.resolve(process.cwd(), 'public', 'sitemap.xml'),
-      path.resolve(process.cwd(), 'dist', 'sitemap.xml'),
-      path.resolve(process.cwd(), 'sitemap.xml'),
-    ];
-
-    for (const filePath of candidates) {
-      if (fs.existsSync(filePath)) {
-        const content = fs.readFileSync(filePath, 'utf-8');
-        res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-        res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
-        res.setHeader('X-Content-Type-Options', 'nosniff');
-        return res.status(200).send(content);
-      }
-    }
-
-    // 2. Dynamic Fallback
     const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-    const host = req.get('host');
+    const host = req.get('host') || 'sh-web-studio.up.railway.app';
     const baseUrl = `${protocol}://${host}`;
     const today = new Date().toISOString().split('T')[0];
 
@@ -63,165 +69,39 @@ app.get('/sitemap.xml', async (req, res) => {
 
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>${baseUrl}/</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>`;
+  <url><loc>${baseUrl}/</loc><lastmod>${today}</lastmod><priority>1.0</priority></url>
+  <url><loc>${baseUrl}/services</loc><lastmod>${today}</lastmod><priority>0.8</priority></url>
+  <url><loc>${baseUrl}/work</loc><lastmod>${today}</lastmod><priority>0.8</priority></url>
+  <url><loc>${baseUrl}/about</loc><lastmod>${today}</lastmod><priority>0.8</priority></url>
+  <url><loc>${baseUrl}/contact</loc><lastmod>${today}</lastmod><priority>0.8</priority></url>
+  <url><loc>${baseUrl}/pricing</loc><lastmod>${today}</lastmod><priority>0.8</priority></url>
+  <url><loc>${baseUrl}/referral-program</loc><lastmod>${today}</lastmod><priority>0.8</priority></url>`;
 
-    // Add static pages
-    const staticPages = ['services', 'work', 'about', 'reviews', 'contact', 'pricing', 'process', 'referral-program'];
-    staticPages.forEach(page => {
-      xml += `
-  <url>
-    <loc>${baseUrl}/${page}</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>`;
-    });
-
-    // Add dynamic projects
-    dynamicProjects.forEach(project => {
-      const slug = project.slug || project._id;
-      xml += `
-  <url>
-    <loc>${baseUrl}/work/${slug}</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>`;
+    dynamicProjects.forEach(p => {
+      xml += `\n  <url><loc>${baseUrl}/work/${p.slug || p._id}</loc><lastmod>${today}</lastmod><priority>0.7</priority></url>`;
     });
 
     xml += '\n</urlset>';
-
-    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    return res.status(200).send(xml);
+    res.header('Content-Type', 'application/xml').send(xml);
   } catch (error) {
-    console.error('Sitemap critical fallback error:', error);
-    const host = req.get('host') || 'sh-web-studio.up.railway.app';
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
-    const hardFallback = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>${protocol}://${host}/</loc>
-    <priority>1.0</priority>
-  </url>
-</urlset>`;
-    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-    return res.status(200).send(hardFallback);
+    res.status(200).send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://sh-web-studio.up.railway.app/</loc></url></urlset>');
   }
 });
 
-// Explicit Google Search Console HTML File Verification Routes
-app.get('/googlea17172bb37818be6.html', (_req, res) => {
-  res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=86400');
-  res.status(200).send('google-site-verification: googlea17172bb37818be6.html');
-});
-
-app.get('/googleQJcq_H2XFIcZrSRz9nOmXJE5-0BdoYHtPpFDf25EKl8.html', (_req, res) => {
-  res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=86400');
-  res.status(200).send('google-site-verification: googleQJcq_H2XFIcZrSRz9nOmXJE5-0BdoYHtPpFDf25EKl8.html');
-});
-
-// Generic Google Verification fallback route
-app.get('/google:code.html', (req, res) => {
-  const code = req.params.code;
-  res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=86400');
-  res.status(200).send(`google-site-verification: google${code}.html`);
-});
-
-// Dynamic Robots.txt Route
+// Robots.txt
 app.get('/robots.txt', (req, res) => {
-  const robotsPath = path.resolve(process.cwd(), 'public', 'robots.txt');
-  if (fs.existsSync(robotsPath)) {
-    const content = fs.readFileSync(robotsPath, 'utf-8');
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=86400');
-    return res.status(200).send(content);
-  }
-
-    const host = req.get('host') || 'sh-web-studio.up.railway.app';
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
-    const baseUrl = `${protocol}://${host}`;
-    const defaultRobots = `User-agent: *
-Allow: /
-Disallow: /admin
-Disallow: /api
-
-Sitemap: ${baseUrl}/sitemap.xml
-`;
-  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=86400');
-  res.status(200).send(defaultRobots);
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+  const host = req.get('host') || 'sh-web-studio.up.railway.app';
+  const content = `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api\n\nSitemap: ${protocol}://${host}/sitemap.xml`;
+  res.header('Content-Type', 'text/plain').send(content);
 });
 
-// Security Middleware
-app.use(helmet({
-  contentSecurityPolicy: false, // Disabled to avoid issues with inline scripts in dev/pre-rendered apps
-  crossOriginEmbedderPolicy: false,
-}));
-
-// CORS Configuration
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // In development/preview, we allow all. In production, we should restrict this.
-      callback(null, true);
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-);
-
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-import { getDBStatusDetails, connectDB } from './config/db.js';
-
-// API Health Check
-app.get('/api/health', (_req, res) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    service: 'SH Web Studio API',
-    storage: getDBStatusDetails(),
-  });
+// Google Verification Fallback
+app.get('/google:code.html', (req, res) => {
+  res.send(`google-site-verification: google${req.params.code}.html`);
 });
 
-app.get('/api/system/storage-status', (_req, res) => {
-  res.json({
-    success: true,
-    data: getDBStatusDetails(),
-  });
-});
-
-app.post('/api/system/retry-atlas', async (_req, res) => {
-  const connected = await connectDB();
-  res.json({
-    success: connected,
-    data: getDBStatusDetails(),
-  });
-});
-
-app.post('/api/system/seed-defaults', async (req, res) => {
-  try {
-    const force = req.body.force === true || req.query.force === 'true';
-    await seedInitialData(force);
-    res.json({ success: true, message: 'Default studio data seeded successfully.' });
-  } catch (error: any) {
-    res.status(500).json({ success: false, message: 'Failed to seed default data.' });
-  }
-});
-
-// Mount Routes
+// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user/auth', userAuthRoutes);
 app.use('/api/referrals', referralRoutes);
@@ -239,9 +119,12 @@ app.use('/api/pricing', pricingRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/chat', chatRoutes);
 
-// 404 for unhandled API endpoints
-app.all('/api/*', (_req, res) => {
-  res.status(404).json({ success: false, message: 'API endpoint not found.' });
+// 404 for API
+app.all('/api/*', (req, res) => {
+  res.status(404).json({ success: false, message: 'Endpoint not found' });
 });
+
+// Centralized error handler fallback
+app.use(errorHandler);
 
 export default app;
