@@ -58,7 +58,7 @@ export const Navbar: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 transition-all duration-200 shadow-lg shadow-black/40">
+    <header className="fixed top-0 left-0 right-0 z-50 transition-all duration-200 shadow-lg shadow-black/40">
       {/* Top Banner (Integrated inside sticky header so no overlap occurs) */}
       <TopOfferBanner />
 
@@ -74,7 +74,6 @@ export const Navbar: React.FC = () => {
             <Link
               to="/"
               className="flex items-center gap-3 group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
-              aria-label="SH Web Studio - Home"
             >
               {settings.logoUrl ? (
                 <img

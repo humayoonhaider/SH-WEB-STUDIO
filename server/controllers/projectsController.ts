@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { Project } from '../models/index.js';
 import { seedInitialData } from '../seed/seedData.js';
-import { pingSearchEngines } from '../utils/seoPing.js';
 
 export const getPublicProjects = async (_req: Request, res: Response): Promise<void> => {
   try {
@@ -138,9 +137,6 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
     });
 
     res.status(201).json({ success: true, message: 'Project created successfully.', data: newProject });
-
-    // Ping search engines for faster re-indexing
-    pingSearchEngines(req.get('host')).catch(err => console.error('SEO Ping Error:', err));
   } catch (error: any) {
     res.status(500).json({ success: false, message: 'Failed to create project.' });
   }
@@ -161,11 +157,6 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
 
     const updated = await Project.findByIdAndUpdate(req.params.id, updateData, { new: true });
     res.json({ success: true, message: 'Project updated successfully.', data: updated });
-
-    // Ping search engines if the project is active
-    if (updated?.isActive) {
-      pingSearchEngines(req.get('host')).catch(err => console.error('SEO Ping Error:', err));
-    }
   } catch (error: any) {
     res.status(500).json({ success: false, message: 'Failed to update project.' });
   }

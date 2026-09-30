@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { SEOSettings } from '../models/index.js';
-import { pingSearchEngines } from '../utils/seoPing.js';
 
 export const getSEO = async (_req: Request, res: Response): Promise<void> => {
   try {
@@ -24,9 +23,6 @@ export const updateSEO = async (req: Request, res: Response): Promise<void> => {
       updated = await SEOSettings.create(req.body);
     }
     res.json({ success: true, message: 'SEO settings saved successfully.', data: updated });
-
-    // Ping search engines as SEO settings have changed
-    pingSearchEngines(req.get('host')).catch(err => console.error('SEO Ping Error:', err));
   } catch (error: any) {
     res.status(500).json({ success: false, message: 'Failed to update SEO settings.' });
   }

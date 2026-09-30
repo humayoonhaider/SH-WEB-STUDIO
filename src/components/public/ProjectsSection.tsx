@@ -96,7 +96,7 @@ export const ProjectsSection: React.FC<{ limit?: number; showHeader?: boolean }>
                       />
                       <div className="flex items-center justify-between text-xs text-neutral-500 font-mono">
                         <span>{project.category}</span>
-                        <Laptop className="w-4 h-4 text-blue-400/80" aria-hidden="true" />
+                        <Laptop className="w-4 h-4 text-blue-400/80" />
                       </div>
                       <div>
                         <div className="text-lg font-bold text-white font-heading tracking-tight">

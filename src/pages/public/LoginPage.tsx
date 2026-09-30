@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { SEO } from '../../components/common/SEO';
+import { Helmet } from 'react-helmet-async';
 import {
   Mail,
   Lock,
@@ -67,11 +67,15 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="pt-12 pb-20 min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8">
-      <SEO 
-        title="Account Sign In"
-        description="Sign in to your SH Web Studio user account to view your referral dashboard and client inquiries."
-      />
+    <div className="pt-28 pb-20 min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8">
+      <Helmet>
+        <title>Account Sign In | SH Web Studio</title>
+        <meta
+          name="description"
+          content="Sign in to your SH Web Studio user account to view your referral dashboard and client inquiries."
+        />
+        <meta name="robots" content="noindex, follow" />
+      </Helmet>
 
       <div className="max-w-md w-full space-y-8">
         {/* Header */}

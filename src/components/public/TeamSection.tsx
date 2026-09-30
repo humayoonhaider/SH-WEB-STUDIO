@@ -134,7 +134,6 @@ export const TeamSection: React.FC = () => {
                       rel="noopener noreferrer"
                       className="p-2 rounded-xl bg-[#17181D] hover:bg-blue-600 text-neutral-300 hover:text-white transition-colors"
                       title="Portfolio Website"
-                      aria-label={`${member.name} Portfolio Website`}
                     >
                       <Globe className="w-4 h-4" />
                     </a>
@@ -146,7 +145,6 @@ export const TeamSection: React.FC = () => {
                       rel="noopener noreferrer"
                       className="p-2 rounded-xl bg-[#17181D] hover:bg-blue-600 text-neutral-300 hover:text-white transition-colors"
                       title="GitHub Profile"
-                      aria-label={`${member.name} GitHub Profile`}
                     >
                       <Github className="w-4 h-4" />
                     </a>
@@ -158,7 +156,6 @@ export const TeamSection: React.FC = () => {
                       rel="noopener noreferrer"
                       className="p-2 rounded-xl bg-[#17181D] hover:bg-blue-600 text-neutral-300 hover:text-white transition-colors"
                       title="LinkedIn Profile"
-                      aria-label={`${member.name} LinkedIn Profile`}
                     >
                       <Linkedin className="w-4 h-4" />
                     </a>
@@ -168,7 +165,6 @@ export const TeamSection: React.FC = () => {
                       href={`mailto:${member.email}`}
                       className="p-2 rounded-xl bg-[#17181D] hover:bg-blue-600 text-neutral-300 hover:text-white transition-colors"
                       title="Email Contact"
-                      aria-label={`Email ${member.name}`}
                     >
                       <Mail className="w-4 h-4" />
                     </a>
@@ -181,7 +177,6 @@ export const TeamSection: React.FC = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors"
-                    aria-label={`View ${member.name}'s Portfolio`}
                   >
                     <span>View Portfolio</span>
                     <ExternalLink className="w-3.5 h-3.5" />

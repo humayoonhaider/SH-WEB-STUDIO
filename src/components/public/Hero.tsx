@@ -12,7 +12,7 @@ export const Hero: React.FC = () => {
   const offerUrl = settings.topOfferButtonUrl || '/referral-program';
 
   return (
-    <section className="relative min-h-[90vh] flex items-center justify-center pt-12 pb-20 overflow-hidden">
+    <section className="relative min-h-[90vh] flex items-center justify-center pt-28 pb-20 overflow-hidden">
       {/* Subtle architectural background grid */}
       <div
         className="absolute inset-0 opacity-[0.03] pointer-events-none"

@@ -275,7 +275,7 @@ export const UserDashboardPage: React.FC = () => {
   );
 
   return (
-    <div className="pt-12 pb-20 min-h-screen bg-[#0B0B0F] px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
+    <div className="pt-28 pb-20 min-h-screen bg-[#0B0B0F] px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
       <Helmet>
         <title>Referral Dashboard & Wallet | SH Web Studio</title>
         <meta name="robots" content="noindex, nofollow" />

@@ -10,14 +10,7 @@
     {
       "src": "/og-image.jpg",
       "sizes": "1200x630",
-      "type": "image/jpeg",
-      "purpose": "any"
-    },
-    {
-      "src": "/og-image.jpg",
-      "sizes": "512x512",
-      "type": "image/jpeg",
-      "purpose": "maskable"
+      "type": "image/jpeg"
     }
   ]
 }

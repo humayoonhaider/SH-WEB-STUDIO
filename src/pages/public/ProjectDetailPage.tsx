@@ -100,7 +100,7 @@ export const ProjectDetailPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-[70vh] flex items-center justify-center pt-12">
+      <div className="min-h-[70vh] flex items-center justify-center pt-28">
         <Spinner size="lg" label="Loading case details..." />
       </div>
     );
@@ -108,7 +108,7 @@ export const ProjectDetailPage: React.FC = () => {
 
   if (error || !project) {
     return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center pt-12 px-4 text-center">
+      <div className="min-h-[70vh] flex flex-col items-center justify-center pt-28 px-4 text-center">
         <h2 className="text-2xl font-bold text-white font-heading mb-3">Project Not Found</h2>
         <p className="text-neutral-400 mb-6 max-w-md">
           {error || 'The requested project could not be found or is not currently active.'}
@@ -127,7 +127,7 @@ export const ProjectDetailPage: React.FC = () => {
   const relatedList = otherProjects.filter((p) => p._id !== project._id).slice(0, 2);
 
   return (
-    <div className="pt-12 pb-16">
+    <div className="pt-28 pb-16">
       <SEO 
         title={`${project.title} | Case Details | SH Web Studio Portfolio`}
         description={project.description}

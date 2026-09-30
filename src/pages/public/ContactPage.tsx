@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { SEO } from '../../components/common/SEO';
 import { ContactSection } from '../../components/public/ContactSection';
 import { Users, Briefcase, Code2, Sparkles, ArrowDown, Send } from 'lucide-react';
 
 export const ContactPage: React.FC = () => {
+  useEffect(() => {
+    document.title = 'Contact SH Web Studio | Start a Project or Join Us';
+  }, []);
+
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'client';
 
@@ -17,11 +20,7 @@ export const ContactPage: React.FC = () => {
   };
 
   return (
-    <div className="pt-12 pb-16">
-      <SEO 
-        title="Contact SH Web Studio | Start a Project or Join Us"
-        description="Get in touch with SH Web Studio to build high-performance web applications or join our engineering collective. Let's talk about your next project."
-      />
+    <div className="pt-28 pb-16">
       {/* Contact Page Hero Header with Prominent Join Studio CTA */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
         <div className="rounded-3xl bg-gradient-to-b from-[#121318] to-[#0B0B0F] border border-[#262833] p-8 sm:p-12 text-center relative overflow-hidden shadow-2xl">

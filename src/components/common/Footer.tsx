@@ -108,8 +108,7 @@ export const Footer: React.FC = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="group flex items-center justify-between text-xs text-neutral-300 hover:text-white bg-[#121318] hover:bg-[#1A1B22] border border-[#262833] hover:border-blue-500/40 px-2.5 py-1.5 rounded-lg transition-all"
-                      title={`${item.name} - ${item.title}`}
-                      aria-label={`Visit ${item.name} (${item.title})`}
+                      title={`${item.name} (${item.url})`}
                     >
                       <span className="truncate group-hover:text-blue-400 transition-colors font-medium">
                         {item.name}

@@ -3,8 +3,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Allow Mongoose to buffer commands while connecting to prevent 5xx crashes during startup
-mongoose.set('bufferCommands', true);
+// Fail fast on database operations if offline
+mongoose.set('bufferCommands', false);
 
 let isMongooseConnected = false;
 let dbStatusDetails = {
